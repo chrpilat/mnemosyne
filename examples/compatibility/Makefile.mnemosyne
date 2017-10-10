@@ -1,0 +1,9 @@
+test_0:
+	@CMAKE_INSTALL_PREFIX@/bin/mnemosyne --config config.cfg --memlib @CMAKE_INSTALL_PREFIX@/share/tech/virtex7/virtex7_memlib.yaml --input-cgraph cgraph_0.yaml --target-verilog-dir output_test_0
+
+test_1:
+	@CMAKE_INSTALL_PREFIX@/bin/mnemosyne --config config.cfg --memlib @CMAKE_INSTALL_PREFIX@/share/tech/virtex7/virtex7_memlib.yaml --input-cgraph cgraph_1.yaml --target-verilog-dir output_test_1
+
+clean:
+	rm -rf output* work
+

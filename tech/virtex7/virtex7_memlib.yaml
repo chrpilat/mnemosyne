@@ -1,0 +1,55 @@
+name: virtex7
+
+sim_files:
+ - name: ${VIVADO_INSTALL_DIR}/ids_lite/ISE/verilog/src/glbl.v
+ - name: ${VIVADO_INSTALL_DIR}/ids_lite/ISE/verilog/src/unisims/RAMB16_S1_S1.v
+ - name: ${VIVADO_INSTALL_DIR}/ids_lite/ISE/verilog/src/unisims/RAMB16_S2_S2.v
+ - name: ${VIVADO_INSTALL_DIR}/ids_lite/ISE/verilog/src/unisims/RAMB16_S4_S4.v
+ - name: ${VIVADO_INSTALL_DIR}/ids_lite/ISE/verilog/src/unisims/RAMB16_S9_S9.v
+ - name: ${VIVADO_INSTALL_DIR}/ids_lite/ISE/verilog/src/unisims/RAMB16_S18_S18.v
+ - name: ${VIVADO_INSTALL_DIR}/ids_lite/ISE/verilog/src/unisims/RAMB16_S36_S36.v
+sim_libs:
+ - name: work.glbl
+
+memory_ip:
+ - type       : BRAM_16384x1
+   width      : 1
+   height     : 16384
+   area       : 1
+   interfaces : [rw, rw]
+   file       : @CMAKE_INSTALL_PREFIX@/share/tech/virtex7/WRAP_RAMB16_S1_S1.v
+
+ - type       : BRAM_8192x2
+   width      : 2
+   height     : 8192
+   area       : 1
+   interfaces : [rw, rw]
+   file       : @CMAKE_INSTALL_PREFIX@/share/tech/virtex7/WRAP_RAMB16_S2_S2.v
+
+ - type       : BRAM_4096x4
+   width      : 4
+   height     : 4096
+   area       : 1
+   interfaces : [rw, rw]
+   file       : @CMAKE_INSTALL_PREFIX@/share/tech/virtex7/WRAP_RAMB16_S4_S4.v
+
+ - type       : BRAM_2048x8
+   width      : 8
+   height     : 2048
+   area       : 1
+   interfaces : [rw, rw]
+   file       : @CMAKE_INSTALL_PREFIX@/share/tech/virtex7/WRAP_RAMB16_S9_S9.v
+
+ - type       : BRAM_1024x16
+   width      : 16
+   height     : 1024
+   area       : 1
+   interfaces : [rw, rw]
+   file       : @CMAKE_INSTALL_PREFIX@/share/tech/virtex7/WRAP_RAMB16_S18_S18.v
+
+ - type       : BRAM_512x32
+   width      : 32
+   height     : 512
+   area       : 1
+   interfaces : [rw, rw]
+   file       : @CMAKE_INSTALL_PREFIX@/share/tech/virtex7/WRAP_RAMB16_S36_S36.v

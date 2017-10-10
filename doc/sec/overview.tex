@@ -1,0 +1,591 @@
+
+{\sc Mnemosyne} is a Linux command-line tool that generates the
+Verilog code of the PLM controllers based on a set of YAML
+configuration files. This chapter describes the tool interface and the
+format of these configuration files. It also contains information on
+how to configure and install the tool from the source code files.
+
+\section{Tool Interface}
+
+The command-line interface of {\sc Mnemosyne} is the following:
+
+\begin{verbatim}
+              .:: Mnemosyne ::.
+ Columbia University, Copyright (c) 2014-2017
+
+Revision: 55fc8cf7a9d90f6610fffa7d61e1c2dff4b4c596(master)
+
+ == Command-line parameters:
+
+General options:
+  --help                                Print help message
+  -v [ --verbosity ] arg (=0)           Verbosity level
+  --config arg                          Configuration file
+
+Input options:
+  --name arg                            Name of the component
+  --memlib arg                          Library of memory IPs (YAML)
+  --mode arg (=opt)                     Execution mode (batch, opt)
+  --opt-goal arg (=AREA_HEURISTIC)      Optimization goal:
+                                          AREA_HEURISTIC: Area Minimization
+  --disable-optimization arg            Disable specific optimizations
+                                        (COLORING,ADDRESS_SPACE,INTERFACE)
+
+Batch-mode options:
+  --interfaces arg                      List of memory interfaces
+  --width arg                           Array bitwidth
+  --height arg                          Array height (in words)
+
+Optimization-mode options:
+  --input-cgraph arg                    Compatibility graph (YAML)
+  --acc-config arg                      Accelerator configuration (YAML)
+  --acc-interface arg                   Accelerator interface (YAML)
+  --acc-list arg                        List of accelerators' configurations
+                                        (YAML)
+
+Output options:
+  --target-verilog-dir arg (=./output)  Output directory (Verilog files)
+  --verilog-name arg                    Verilog filename (memory subsystem)
+  --temp-dir arg (=./work)              Temporary directory
+  --export arg                          Export mode:
+                                          IPXACT: Vivado IP-XACT component
+                                          CTOSIP: Cadence C-to-Silicon vendor
+                                                  RAM
+                                          STRATUSIP: Cadence Stratus memory IP
+  --generate-top-plm arg (=0)           Generate top module of memory subsystem
+  --top-name arg                        Name of top module
+  --top-verilog-name arg                Verilog filename (top module)
+  --target-export-dir arg (=./output)   Output directory (Export files)
+\end{verbatim}
+
+\noindent Specifically, the general options are:
+\begin{itemize}
+\item {\tt help} prints the above message window.
+\item {\tt verbosity} indicates the verbosity level for the tool. The
+  default level only reports minimal information, like the number of
+  generated PLM controllers and the total area of the resulting memory
+  subsystem.  Increasing the verbosity level allows the user to get
+  additional information about the tool execution.
+\item {\tt config} specifies the YAML configuration file, whose options can
+  be then overwritten with explicit command-line options (see Section~\ref{sec:config}).
+\end{itemize}
+
+\noindent The input options for all execution modes are:
+\begin{itemize}
+\item {\tt name} specifies the name of the accelerator. It is used to
+  eventually determine the name of the top component and the file containing the generated
+  memory subsystem.
+\item {\tt memlib} specifies the YAML file of the memory library (i.e. list of
+  available memory IP blocks) to be used for creating the accelerator memory
+  subsystem (see Section~\ref{sec:library}).
+\item {\tt mode} specifies the execution mode:
+\begin{itemize}
+\item {\tt batch}: only one single memory IP is generated;
+\item {\tt opt}: multiple data structures are analyzed for identifying sharing opportunities.
+\end{itemize}
+\item {\tt opt-goal} specifies which is the algorithm used to perform optimization:
+\begin{itemize}
+\item AREA\_HEURISTIC: area minimization (default)
+\end{itemize}
+\item {\tt disable-optimization} specifies that the given optimization must be disabled. This option can be repeated several times with different values:
+\begin{itemize}
+\item COLORING: disabling the interface coloring optimization;
+\item ADDRESS\_SPACE: disabling the sharing of data structures with compatibile address spaces;
+\item INTERFACE: disabling the sharing of data structures with compatibile interfaces.
+\end{itemize}
+\end{itemize}
+
+\noindent The options for the batch-mode execution are:
+\begin{itemize}
+\item {\tt interfaces} specifies the list of interfaces for the memory block to be generate.
+\item {\tt width} specifies the width (in bits) of the data to be stored.
+\item {\tt height} specifies the number of data words to be stored.
+\end{itemize}
+
+\noindent The options for the optimization-mode execution are:
+\begin{itemize}
+\item {\tt input-cgraph} specifies the YAML file describing the compatibilities among the data structures to be stored into the PLM (see Section~\ref{sec:compatibility}).
+\item {\tt acc-config} specifies the YAML file containing the data
+  structures to be stored into the PLM (see Section~\ref{sec:config}).
+\item {\tt acc-interface} specifies the YAML file containing the
+  interface of the component to be
+  attached to the generated memory subsystem (see
+  Section~\ref{sec:interface}).
+\item {\tt acc-list} specifies the YAML file containing the
+  configurations of the accelerators to be optimized concurrently (see
+  Section~\ref{sec:multi-acc}).
+\end{itemize}
+
+\noindent The output options for all execution modes are:
+\begin{itemize}
+\item {\tt target-verilog-dir} specifies which is the directory where the
+  output files will be generated.
+\item {\tt verilog-name} specifies the name of the output Verilog file that will be generated.
+\item {\tt temp-dir} specifies the name of the temporary directory.
+\item {\tt export} specifies the export modes to be activated. This option can be repeated several times with different values:
+\begin{itemize}
+\item IPXACT: description of the memory IP in IP-XACT format suitable for Xilinx Vivado Design Suite;
+\item CTOSIP: description of the memory IP in the vendor RAM format suitable for Cadence C-to-Silicon;
+\item STRATUSIP: description of the memory IP in the vendor RAM format suitable for Cadence Stratus HLS.
+\end{itemize}
+\item {\tt generate-top-plm} specifies whether the top PLM module (i.e., the one containing all the PLM modules) has to be generated.
+\item {\tt top-name} specifies the name of the top module containing the PLM modules and the component to be connected.
+\item {\tt top-verilog-name} specifies the name of the Verilog file containing the top module to be generated.
+\item {\tt target-export-dir} specifies which is the directory where the
+ files generated by the export mode will be generated.
+\end{itemize}
+  
+\section{Configuration, Installation, and Execution}
+
+{\sc Mnemosyne} has been implemented in C++\footnote{The current
+  source files can be found at:
+  \mygit{https://github.com/chrpilat/mnemosyne} (branch
+        {\em master})} and tested under Linux 16.04 LTS.
+{\sc Mnemosyne} requires the following libraries for compilation and
+execution:
+\begin{itemize}
+\item python-networkx
+\item libboost-all-dev
+\item libxml++2.6-dev
+\item glpk-utils
+\end{itemize}
+The tool can be configured and installed using CMake. One nice and
+highly recommended feature of CMake is the ability to do out-of-source
+builds. In this way you can make all your object files, various
+temporary depend files, and even the binary executables without
+cluttering up your source tree. To use out-of-source builds, create a
+build directory in your top-level folder (technically, this can be
+anywhere, but the top-level project folder seems to be a logical
+choice). Next, change into your build directory and run {\tt cmake}
+pointing it to the directory of the top-level CMakeLists.txt.  For
+example, the following set of commands configures {\sc Mnemosyne} so
+that the executable will be installed in {\sc /opt/mnemosyne/bin}, while
+the YAML files of the available memory libraries will be installed in
+{\sc /opt/mnemosyne/share}:
+
+\begin{commandshell}{Path: <mnemosyne\_top>}
+  mkdir build
+  cd build
+  cmake .. -DCMAKE_INSTALL_PREFIX=/opt/mnemosyne
+\end{commandshell}
+
+\noindent The tool can be then compiled and installed with the
+following commands:
+
+\begin{commandshell}{Path: <mnemosyne\_top>/build}
+  make
+  make install
+\end{commandshell}
+
+\noindent After installation, the current version of the memory
+libraries will be available in the directories {\tt
+<target\_path>/share/tech/<tech>} (for each target technology {\tt
+tech}). These directories will contain the Verilog files of the wrappers
+around the memory IPs (see Chapter~\ref{ch:mem_interface}) and the YAML file
+containing the list of available memory IPs, along with technology-related
+information (e.g. area).
+
+\subsection{Execution Modes}
+
+The tool has several execution modes, where the designer must specify the
+name of the accelerator and the YAML file of
+the corresponding memory library. Additional parameters for each execution mode
+are detailed below.
+
+\vspace{4pt}
+{\bf Batch execution.} This mode generates a memory IP for a single data structure. For example,
+if the designer wants to generate a PLM for a 1,024$\times$32 array (one write and one read interfaces), the tool can be invoked as 
+follows (see the example in the folder \name{examples/batch}):
+
+\begin{commandshell}{}
+  mnemosyne --mode batch --memlib /opt/mnemosyne/share/tech/virtex7/virtex7_memlib.yaml  \                 --width 32 --height 1024 --interfaces w,r --name plm_1024x32_1w1r
+\end{commandshell}
+
+\noindent This command generates the Verilog file {\tt mem\_plm\_1024x32\_1w1r\_rtl.v} of the corresponding memory subsystem. This file is generated in the subfolder {\tt output} (i.e. the default one).
+
+\vspace{4pt}
+{\bf Single-accelerator optimization.} This mode requires to specify
+the accelerator configuration and the compatibility graph. For
+example, if the designer wants to generate a PLM for the
+accelerator {\sc Sort} targeting an FPGA technology, the tool can be
+invoked as follows (see the example in the folder \name{examples/multiacc}):
+
+\begin{commandshell}{}
+  mnemosyne --memlib /opt/mnemosyne/share/tech/virtex7/virtex7_memlib.yaml  \                 --acc-config ./sort_0_config.yaml --input-cgraph ./sort_cgraph.yaml --name sort
+\end{commandshell}
+
+\noindent This command generates the Verilog file {\tt mem\_sort\_rtl.v} of the corresponding memory subsystem. This file is generated in the subfolder {\tt output} (i.e. the default one).
+
+\vspace{4pt}
+{\bf Single-accelerator optimization with top module generation.} In order to
+generate the top module that connects the memory subsystem and the accelerator
+logic, it is necessary to specify the YAML file containing the description of the
+module interface. For example, to generate both the PLM and the
+corresponding top module for the {\sc Sort} accelerator, {\sc Mnemosyne} can be
+invoked as follows (see the example in the folder \name{examples/multiacc}):
+
+\begin{commandshell}{}
+  mnemosyne --memlib /opt/mnemosyne/share/tech/virtex7/virtex7_memlib.yaml  \                 --acc-config ./sort_0_cfg.yaml --input-cgraph ./sort_cgraph.yaml --name sort \
+        --acc-interface ./sort_0_interface.yaml \end{commandshell}
+
+\noindent This command generates two Verilog files ({\tt mem\_sort\_rtl.v}
+and {\tt top\_sort\_rtl.v}, respectively). The former contains the
+generated memory subsystem, while the latter contains the interconnections
+between the accelerator logic and the different PLM controllers that have been
+generated.  The files are generated in the subfolder {\tt output} (i.e. the
+default one).
+
+\vspace{4pt}
+{\bf Multi-accelerator optimization.} In order to share the memory IPs across
+multiple accelerators, it is necessary to specify the list of accelerators and
+the corresponding configuration files. This configuration specifies also the
+order of the accelerators, whose identifier is used in the device driver to
+configure and start the execution of the corresponding accelerator. For creating the
+memory subsystem and the top module of two accelerators {\sc Sort} and {\sc
+Debayer}, {\sc Mnemosyne} can be invoked as follows (see the example in the folder \name{examples/multiacc}):
+
+\begin{commandshell}{}
+  mnemosyne --memlib /opt/mnemosyne/share/tech/virtex7/virtex7_memlib.yaml  \                 --acc-list ./multiacc_config.yaml --name multiacc
+\end{commandshell}
+
+\begin{lattention}
+{\sc Mnemosyne} assumes that the accelerators are never executed at the same
+time and it is not necessary to preserve data between the execution of the
+accelerators. Hence, each data structure of an accelerator is compatible with 
+the data structures of any other accelerator.
+\end{lattention}
+
+\noindent This command generates a Verilog file containing the unique memory
+subsystem for all accelerators ({\tt mem\_multiacc\_rtl.v}) and a
+Verilog file for the top module with the logic to drive all the accesses to the
+DMA controller and the configuration registers ({\tt
+top\_multiacc\_rtl.v}).
+
+\section{Memory Library}\label{sec:library}
+
+The memory library contains the list of memory IPs that are available to create
+the multi-bank architecture of the accelerator memory subsystem and store all
+the data structures.  Besides default memory libraries, it is possible to
+defined user-specific libraries with a custom set of memory IPs, including more
+complex macro-blocks.
+
+This section describes how to specify a memory library to be used by {\sc
+Mnemosyne} when creating the accelerator memory subsystem. A custom library can
+be specified in YAML as follows:
+
+\begin{myxml}{File: ./memory\_library.yaml}
+name: mymemorylibrary
+memory_ip:
+ - type           : [...]
+   [...]
+ - type           : [...]
+   [...]
+ - type           : [...]
+   [...]
+ - type           : [...]
+   [...]
+\end{myxml}
+\noindent This memory library contains four memory IPs, each of them represented by the tag {\tt type} with 
+the name of the memory IP.
+Indeed, each tag {\tt memory\_ip} represents a memory IP block that can be used by
+the tool. This tag must have the following elements:
+\begin{itemize}
+\item {\tt width} represents the bitwidth of the data to be stored;
+\item {\tt height} represents the number of elements that can be stored in the memory IP;
+\item {\tt file} indicates the Verilog file that contains the defintion of the component that wraps the
+actual memory IP provided by the technology vendor (see
+Chapter~\ref{ch:mem_interface});
+\item {\tt area} indicates the resource requirements for this memory IP (e.g. $um^2$ in case
+of CMOS technology or number of BRAMs in case of FPGA technology);
+\item {\tt interfaces} specifies the list of interfaces offered by the memory IP. Each of them can be specified as``r'' (read-only), ``w'' (write-only), or ``rw'' (read/write).
+\end{itemize}
+For example, a dual-port memory IP for CMOS technology capable to store 1,024 32-bit elements can be specified 
+as follows:
+\begin{myxml}{File: ./memory\_library.yaml}
+ - type           : SRAM_1024x32
+   height         : 1024
+   width          : 32
+   interfaces     : [rw, rw]
+   area           : [...]
+   file           : [...]
+\end{myxml}
+\noindent A PLM controller that is implemented with this memory IP will contain a certain
+number of modules named {\tt SRAM\_1024x32}, whose definition is specified
+inside the given file.
+
+\section{Accelerator Configuration}\label{sec:config}
+
+This section describes the format of the YAML file that is used to specify which
+data structures have to be stored in the PLM, along with the associated
+information necessary to create the proper micro-architecture of the memory
+subsystem. The file is organized as follows:
+\begin{myxml}{File: <accelerator>.yaml}
+arrays:
+  - name       : [...]
+    [...]
+  - name       : [...]
+    [...]
+  - name       : [...]
+    [...]
+\end{myxml}
+\noindent where each tag {\tt name} represents a data structure to be stored in the PLM.
+Each of these tags must have the following attributes:
+\begin{itemize}
+\item {\tt name} represents the name of the data structure;
+\item {\tt width} represents the bitwidth of the data structure;
+\item {\tt height} represents the number of elements to be stored;
+\item {\tt interfaces} specifies the list of all interfaces required by the processes of the accelerator logic to access the data structure. 
+\end{itemize}
+
+\begin{lattention}
+{\sc Mnemosyne} assumes a specific order of the interfaces: write interfaces must be specified
+first, followed by read/write interfaces, and then read interfaces.
+\end{lattention}
+
+\vspace{4pt}
+{\bf Buffer definition.}
+Each buffer must also contain information about the processes that
+access the data structure, along with details about the corresponding interfaces
+and the access pattern. The list of processes is specified as follows:
+
+\begin{myxml}{File: <accelerator>.yaml}
+  - name       : [...]
+    [...]
+    processes  :
+      - name       : [...]
+        [...]
+\end{myxml}
+\noindent where each tag {\tt process} has the following attributes:
+\begin{itemize}
+\item {\tt name} represents the name of the process 
+\item {\tt interfaces} specifies which interfaces (positional index with respect to the general list) are used by the current process;
+\item {\tt read\_pattern} specifies the access pattern for the read interfaces of the current process (optional);
+\item {\tt write\_pattern} specifies the access pattern for the write interfaces of the current process (optional).
+\end{itemize}
+For example, let us assume to have a 2,048 16-bit array named {\tt
+A0}, which is written by process {\tt producer} with one interface and
+read by process {\tt consumer} with two interfaces. The buffer is then
+specified as follows:
+\begin{myxml}{File: <accelerator>.yaml}
+  - name       : A0
+    height     : 2048
+    width      : 16
+    interfaces : [w, r, r]
+    processes  :
+      - name       : producer
+        interfaces : 0
+      - name       : consumer
+        interfaces : [1, 2]
+\end{myxml}
+
+\vspace{4pt}
+{\bf Interface sharing.}
+Additional tags can be used to specify compatibility between the interfaces. For
+example, let {\tt B0} be a data structure written by process {\tt producer} and
+read by two processes {\tt consumer\_one} and {\tt consumer\_two} executing
+serially. The buffer is then defined as follows:
+\begin{myxml}{File: <accelerator>.yaml}
+  - name       : B0
+    height     : 2048
+    width      : 16
+    interfaces : [w, r, r]
+    processes  :
+      - name       : producer
+        interfaces : 0
+      - name       : consumer_one
+        interfaces : 1
+      - name       : consumer_two
+        interfaces : 2
+\end{myxml}
+\noindent Then, since the two read processes never access the data structure at the same time,
+it is possible to specify that interfaces {\tt 1} and {\tt 2} can be shared. This can 
+be specified by adding the tag {\tt sharing} as follows:
+\begin{myxml}{File: <accelerator>.yaml}
+  - name       : B0
+    height     : 2048
+    width      : 16
+    interfaces : [w, r, r]
+    processes  :
+      - name       : producer
+        interfaces : 0
+      - name       : consumer_one
+        interfaces : 1
+      - name       : consumer_two
+        interfaces : 2
+    sharing    : [1, 2]
+\end{myxml}
+\noindent{\sc Mnemosyne} then generates a PLM micro-architecture that minimizes the
+memory IPs with the proper logic to drive the requests from the processes.
+
+\section{Memory Compatibility Graph}\label{sec:compatibility}
+
+The memory compatibility graph specifies the relationships among the data
+structures. The graph is represented by a text file that is organized as
+follows:
+\begin{myxml}{File: <accelerator>.yaml}
+nodes: [...]
+edges:
+  - compatibility : [...]
+    type          : [...]
+  - compatibility : [...]
+    type          : [...]
+  - compatibility : [...]
+    type          : [...]
+\end{myxml}
+\noindent where the tag {\tt nodes} represents the list of nodes to be
+stored in the PLM, while the tag {\tt edges} denotes the list of compatibility edges (i.e., each pair of two compatible nodes).
+
+\begin{lattention}
+The list of nodes in the memory compatibility graph must match the
+list of data structures in the configuration
+file. Specifically, the memory compatibility graph must contain one
+node for each of the data structures.
+\end{lattention}
+
+\noindent The list of nodes is specified as follows:
+\begin{myxml}{File: <accelerator>.yaml}
+nodes : [A0, A1, A2]
+\end{myxml}
+\noindent where the names of the data structures are reported in the list. Note that there has to be at least a tag with name {\tt A0} in the configuration file of the
+accelerator.
+An edge is specified instead as follows:
+\begin{myxml}{File: <accelerator>.yaml}
+edges:
+    [...]
+    - compatibility : [A0, A1]
+      type          : b
+    [...]
+\end{myxml}
+\noindent where the tag {\tt compatibility} contains the pair of nodes, while the text contained in 
+the tag {\tt type} specifies the type of
+compatibility. Currently, the following types are supported: {\em address-space
+compatibility} (type {\bf a}) and {\em memory-interface compatibility} (type
+{\bf b}).
+\begin{lattention}
+{\sc Mnemosyne} adopts a conservative approach. Hence, if there is no
+edge between two nodes, the tool assumes that the two corresponding
+data structures are not compatible and behaves accordingly (e.g. it
+does not share memory IPs between the two nodes).
+\end{lattention}
+
+\section{Accelerator Interface}\label{sec:interface}
+
+The YAML file describing the accelerator interface is used to generate the
+connection between process interfaces (defined in
+Chapter~\ref{ch:proc_interface}) and the corresponding interfaces of
+the generated PLM controllers. This is simply a translation of the
+Verilog/VHDL interface of the module.
+%%%
+The file is organized as follows:
+\begin{myxml}{File: <accelerator>\_rtl.yaml}
+name: [...]
+interface:
+   - id: [...]
+     [...]
+   - id: [...]
+     [...]
+\end{myxml}
+\noindent where each tag {\tt id} specifies the name of a port of the module (as indicated in the
+corresponding Verilog/VHDL file). Each tag must have the following attributes:
+\begin{itemize}
+\item {\tt dir} specifies the direction of the port (either ``input'' or ``output'');
+\item {\tt size} specifies the size of the port (in bits).
+\end{itemize}
+
+Examples of port descriptions are shown below:
+\begin{myxml}{File: <accelerator>\_rtl.yaml}
+name: [...]
+interface:
+   - id  : clk
+     dir : input
+     size: 1 
+   [...]
+   - id  : A0_D0
+     dir : output
+     size: 32 
+   [...]
+   - id  : A1_Q0
+     dir : input
+     size: 32
+\end{myxml}
+\noindent where the clock port is defined as a single-bit input port, while the data ports of two memory interfaces for accessing a 32-bit data structures have the corresponding direction and size.
+
+\section{Multi-accelerator Optimization}\label{sec:multi-acc}
+
+{\sc Mnemosyne} can be also used to optimize the memory subsystem of multiple
+accelerators executing in time multiplexing. For this, it is necessary to
+specify a YAML configuration file, which contains information (i.e. accelerator
+configuration, interface, and compatibility graph) about each accelerator.
+%%%
+The file has the following format:
+\begin{myxml}{File: <accelerators>.yaml}
+accelerator:
+  - name          : [...]
+    [...]
+  - name          : [...
+    [...]
+\end{myxml}
+\noindent where each tag {\tt name} contains the name and the description of an
+accelerator that shares the memory IPs with all the others. Note that the
+positional index of the accelerators in this list corresponds to the id used for
+the configuration of the macro-block by the device driver.
+%%
+Each of these tags must have the following attributes:
+\begin{itemize}
+\item {\tt cgraph} is the path to the compatibility graph of the accelerator
+(see Section~\ref{sec:compatibility});
+\item {\tt acc\_config} represents the path to the accelerator configuration
+(see Section~\ref{sec:config});
+\item {\tt acc\_interface} contains the path to the accelerator interface (see
+Section~\ref{sec:interface}).
+\end{itemize}
+\noindent In this execution mode, {\sc Mnemosyne} does not require any changes to the configuration files of each single accelerator. So the suggested approach is:
+\begin{enumerate}
+\item generate the configuration files for each single accelerator;
+\item validate the generated memory subsystem with RTL simulation;
+\item create the configuration file for multi-accelerator optimization by wrapping 
+these generated configuration files for each single accelerator.
+\end{enumerate}
+\noindent Let {\sc Sort} and {\sc Debayer} be two accelerators to be executed in
+time multiplexing as in the example contained in the folder \name{example/multiacc}. We can create a single macro-accelerator called {\sc multiacc}
+with a unique memory subsystem by executing {\sc Mnemosyne} as follows:
+\begin{commandshell}{}
+  mnemosyne --memlib /opt/mnemosyne/share/tech/virtex7/virtex7_memlib.yaml  \                 --acc-list ./multiacc_config.yaml --name multiacc
+\end{commandshell}
+\noindent where the file {\tt multiacc\_config.yaml} is organized as follows:
+\begin{myxml}{File: example/multiacc\_config.yaml}
+accelerator:
+  - name          : sort_0
+    cgraph        : ./sort_cgraph.yaml
+    acc_config    : ./sort_0_config.yaml
+    acc_interface : ./sort_0_interface.yaml
+  - name          : debayer_0
+    cgraph        : ./debayer_cgraph.yaml
+    acc_config    : ./debayer_0_config.yaml
+    acc_interface : ./debayer_0_interface.yaml
+\end{myxml}
+
+\section{Configuration File}\label{sec:config}
+
+{\sc Mnemosyne} also supports configuration files with a subset of the parameters. This is particularly useful when Mnemosyne has to be executed multiple times with different values only for part of the parameters. For example, {\sc Mnemosyne} can be used to design several 1,024$\times$32 memories with the following configuration file:
+
+\begin{myxml}{File: config.cfg}
+mode               = batch
+memlib             = /opt/mnemosyne/share/tech/virtex7/virtex7_memlib.yaml
+height             = 1024
+width              = 32
+\end{myxml}
+\noindent where each command-line parameter is stored in the form \name{<parameter_name> = <parameter_value>}. Then, {\sc Mnemosyne} can be invoked as follows:
+
+\begin{commandshell}{}
+  mnemosyne --config config.cfg --interfaces w,r --name mem_1024x32_1w1r
+  mnemosyne --config config.cfg --interfaces w,r,r --name mem_1024x32_1w2r
+  mnemosyne --config config.cfg --interfaces w,r,r,r,r --name mem_1024x32_1w4r
+\end{commandshell}
+
+The parameters in the configuration file can be overwritten by redefining the value in the command line. For example, an alternative 512$\times$32 memory can be designed as follows:
+\begin{commandshell}{}
+  mnemosyne --config config.cfg --interfaces w,r --height 512 --name mem_512x32_1w1r
+\end{commandshell}
+
+

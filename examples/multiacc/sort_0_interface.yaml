@@ -1,0 +1,253 @@
+name: sort_0_unisim_rtl
+
+interface: 
+  
+   - id: A0_A0
+     dir: output
+     size: 10
+
+   - id: A0_A1
+     dir: output
+     size: 10
+
+   - id: A0_CE0
+     dir: output
+     size: 1
+
+   - id: A0_CE1
+     dir: output
+     size: 1
+
+   - id: A0_D0
+     dir: output
+     size: 32
+
+   - id: A0_Q1
+     dir: input
+     size: 32
+
+   - id: A0_WE0
+     dir: output
+     size: 1
+
+   - id: A1_A0
+     dir: output
+     size: 10
+
+   - id: A1_A1
+     dir: output
+     size: 10
+
+   - id: A1_CE0
+     dir: output
+     size: 1
+
+   - id: A1_CE1
+     dir: output
+     size: 1
+
+   - id: A1_D0
+     dir: output
+     size: 32
+
+   - id: A1_Q1
+     dir: input
+     size: 32
+
+   - id: A1_WE0
+     dir: output
+     size: 1
+
+   - id: B0_A0
+     dir: output
+     size: 10
+
+   - id: B0_A1
+     dir: output
+     size: 10
+
+   - id: B0_CE0
+     dir: output
+     size: 1
+
+   - id: B0_CE1
+     dir: output
+     size: 1
+
+   - id: B0_D0
+     dir: output
+     size: 32
+
+   - id: B0_Q1
+     dir: input
+     size: 32
+
+   - id: B0_WE0
+     dir: output
+     size: 1
+
+   - id: B1_A0
+     dir: output
+     size: 10
+
+   - id: B1_A1
+     dir: output
+     size: 10
+
+   - id: B1_CE0
+     dir: output
+     size: 1
+
+   - id: B1_CE1
+     dir: output
+     size: 1
+
+   - id: B1_D0
+     dir: output
+     size: 32
+
+   - id: B1_Q1
+     dir: input
+     size: 32
+
+   - id: B1_WE0
+     dir: output
+     size: 1
+
+   - id: C0_A0
+     dir: output
+     size: 10
+
+   - id: C0_A1
+     dir: output
+     size: 10
+
+   - id: C0_CE0
+     dir: output
+     size: 1
+
+   - id: C0_CE1
+     dir: output
+     size: 1
+
+   - id: C0_D0
+     dir: output
+     size: 32
+
+   - id: C0_Q1
+     dir: input
+     size: 32
+
+   - id: C0_WE0
+     dir: output
+     size: 1
+
+   - id: C1_A0
+     dir: output
+     size: 10
+
+   - id: C1_A1
+     dir: output
+     size: 10
+
+   - id: C1_CE0
+     dir: output
+     size: 1
+
+   - id: C1_CE1
+     dir: output
+     size: 1
+
+   - id: C1_D0
+     dir: output
+     size: 32
+
+   - id: C1_Q1
+     dir: input
+     size: 32
+
+   - id: C1_WE0
+     dir: output
+     size: 1
+
+   - id: bufdin_data
+     dir: input
+     size: 32
+
+   - id: bufdin_ready
+     dir: output
+     size: 1
+
+   - id: bufdin_valid
+     dir: input
+     size: 1
+
+   - id: bufdout_data
+     dir: output
+     size: 32
+
+   - id: bufdout_ready
+     dir: input
+     size: 1
+
+   - id: bufdout_valid
+     dir: output
+     size: 1
+
+   - id: clk
+     dir: input
+     size: 1
+
+   - id: conf_batch
+     dir: input
+     size: 32
+
+   - id: conf_done
+     dir: input
+     size: 1
+
+   - id: conf_len
+     dir: input
+     size: 32
+
+   - id: rd_grant
+     dir: input
+     size: 1
+
+   - id: rd_index
+     dir: output
+     size: 32
+
+   - id: rd_length
+     dir: output
+     size: 32
+
+   - id: rd_request
+     dir: output
+     size: 1
+
+   - id: rst
+     dir: input
+     size: 1
+
+   - id: sort_done
+     dir: output
+     size: 1
+
+   - id: wr_grant
+     dir: input
+     size: 1
+
+   - id: wr_index
+     dir: output
+     size: 32
+
+   - id: wr_length
+     dir: output
+     size: 32
+
+   - id: wr_request
+     dir: output
+     size: 1
+
+

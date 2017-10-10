@@ -1,0 +1,1 @@
+nodes: [A0_bayer, B0_debayer_b, B0_debayer_g, B0_debayer_r]

@@ -1,0 +1,21 @@
+arrays:
+
+  - name       : A0
+    height     : 12288
+    width      : 16
+    interfaces : [w, r]
+
+  - name       : B0
+    height     : 12264
+    width      : 16
+    interfaces : [w, r]
+
+  - name       : C0
+    height     : 12264
+    width      : 16
+    interfaces : [w, r]
+
+  - name       : D0
+    height     : 12264
+    width      : 16
+    interfaces : [w, r]

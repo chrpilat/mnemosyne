@@ -1,0 +1,14 @@
+all: sort debayer multiacc
+
+sort:
+	@CMAKE_INSTALL_PREFIX@/bin/mnemosyne --config config_sort.cfg --memlib @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/saed32nm_memlib.yaml --target-verilog-dir ./output_sort_verilog
+
+debayer:
+	@CMAKE_INSTALL_PREFIX@/bin/mnemosyne --config config_debayer.cfg --memlib @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/saed32nm_memlib.yaml --target-verilog-dir ./output_debayer_verilog
+
+multiacc:
+	@CMAKE_INSTALL_PREFIX@/bin/mnemosyne --config config_multiacc.cfg --memlib @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/saed32nm_memlib.yaml --target-verilog-dir ./output_multiacc_verilog
+
+
+clean:
+	rm -rf output_* work

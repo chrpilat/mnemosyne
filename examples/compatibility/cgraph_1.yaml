@@ -1,0 +1,15 @@
+nodes: [A0, B0, C0, D0]
+
+edges:
+  - compatibility : [A0, B0]
+    type          : b
+
+  - compatibility : [B0, C0]
+    type          : a
+
+  - compatibility : [C0, D0]
+    type          : a
+
+  - compatibility : [B0, D0]
+    type          : a
+

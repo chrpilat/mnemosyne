@@ -1,0 +1,159 @@
+\documentclass[a4paper,11pt]{book}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage[english]{babel}
+
+\usepackage{enumitem}
+\setlist[itemize,1]{leftmargin=\dimexpr 26pt-.1in}
+\setlist[enumerate,1]{leftmargin=\dimexpr 26pt-.1in}
+
+\usepackage[
+top=1in,
+bottom=1in,
+left=0.75in,
+right=0.75in,
+bindingoffset=0in,
+heightrounded,
+]{geometry}
+
+\usepackage{hyperref}
+\hypersetup{%
+unicode=true,%
+pdfstartview={FitH},%
+colorlinks=true,%
+citecolor=blue,%
+linkcolor=blue,%
+linkcolor=blue,%
+urlcolor=blue
+}
+
+\usepackage{tcolorbox}
+\tcbuselibrary{minted,listings,skins,most}
+\usepackage{minted}
+\usepackage{lipsum}
+\usepackage{amssymb}
+
+\definecolor{consoleback}{rgb}{0.745098 0.745098 0.745098}
+\definecolor{tclback}{rgb}{1 0.980392 0.980392}
+%\newmintinline[tclcode]{tcl}{fontsize=\footnotesize,framesep=0.1pt,bgcolor=tclback}
+\newmintinline[bashcode]{tcsh}{fontsize=\small,framesep=0.1pt,bgcolor=green!5!white}
+\newmintinline[name]{bash}{fontsize=\small,framesep=0.1pt}
+
+\newtcolorbox{lattention}{breakable,enhanced,arc=0mm,colback=yellow!20,colframe=orange!40,leftrule=12mm,%
+overlay={\node[anchor=north west,outer sep=2pt] at (frame.north west) {\includegraphics[width=8mm]{img/warning.png}}; }}
+
+\setminted[console]{
+    bgcolor=consoleback,
+    breaklines=true,
+    fontsize=\tiny
+}
+\newtcblisting{myverilog}[2][]{listing engine=minted, listing only,#1, title=#2, minted language=verilog, colback=green!5!white,colframe=green!50!black, colbacktitle=green!60!black,enhanced,coltitle=black,
+fonttitle=\bfseries\footnotesize,
+attach boxed title to top center={yshift=-2mm}}
+\newtcblisting{mytcl}[2][]{listing engine=minted, listing only,#1, title=#2, minted language=tcl, colback=green!5!white,colframe=green!50!black, colbacktitle=green!60!black,enhanced,coltitle=black,
+fonttitle=\bfseries\footnotesize,
+attach boxed title to top center={yshift=-2mm}}
+\newtcblisting{myxml}[2][]{listing engine=minted, listing only,#1, title=#2, minted language=xml, colback=green!5!white,colframe=green!50!black, colbacktitle=green!60!black,enhanced,coltitle=black,
+fonttitle=\bfseries\footnotesize,
+attach boxed title to top center={yshift=-2mm}}
+\newtcblisting{mymake}[2][]{listing engine=minted, listing only,#1, title=#2, minted language=makefile, colback=green!5!white,colframe=green!50!black, colbacktitle=green!60!black,enhanced,coltitle=black,
+fonttitle=\bfseries,
+attach boxed title to top center={yshift=-2mm}}
+\newtcblisting{commandshell}[2][]{colback=black!10!white,#1,title=#2, colupper=black,colframe=black,coltitle=black,colbacktitle=consoleback,
+listing only,listing options={style=tcblatex,language=sh},
+fonttitle=\bfseries, left=3pt,right=3pt,
+every listing line={\textcolor{red}{\small\ttfamily\bfseries \$> }}, enhanced,
+attach boxed title to top center={yshift=-2mm}}
+
+% chapitres dans un box
+\usepackage[plainheadsepline,nouppercase]{scrpage2}
+\pagestyle{scrheadings}
+\renewcommand{\chaptermark}[1]{\markboth{{\thechapter. #1}}{}}
+\renewcommand{\sectionmark}[1]{\markright{ \thesection.\ #1}{}}
+\newcommand\chapterstring{Chapter}
+\usepackage{titlesec}
+\titleformat{\chapter}[frame] {\bfseries\color{black}} {\filright
+\enspace \Large \chapterstring~\thechapter} {20pt} {\LARGE\filcenter}
+\titleformat{\section}{\vspace{0mm plus 1cm}\addpenalty{-1000}\color{black}
+\Large\bfseries}{\thesection}{1em}{}[{\color{black}\titlerule[0.5pt]}]
+\titleformat{\subsection}{\addpenalty{-500}\large\bfseries}{
+\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\penalty-500\vspace{0pt plus 2pt}{}\bfseries}{\thesubsubsection}{}{}[\vspace{-14pt}]
+
+\usepackage{tikz}
+\usetikzlibrary{positioning,shapes,shadows,arrows}
+\newcommand{\mygit}[1]{
+    \tikz[baseline=-0.5ex]{ 
+        \tikzset{lib/.style={
+            rectangle split,
+            rectangle split parts=2,
+            rectangle split horizontal,
+            rectangle split part fill={green!75!blue!50!white,green!10!white},
+            rectangle split draw splits=false,
+            rounded corners=2pt,
+            rectangle split part align={right,right},
+            draw=green!50!black,
+            minimum height=10pt}
+        }
+        \node[lib] (var){
+        \nodepart[text=green!25!black]{two}#1};
+        \node[text=white,font=\sffamily\bfseries\tiny,rotate=90] at ([xshift=6pt]var.west) {Git};
+    }
+}
+\newcommand{\mylib}[1]{
+    \tikz[baseline=-0.5ex]{ 
+        \tikzset{lib/.style={
+            rectangle split,
+            rectangle split parts=2,
+            rectangle split horizontal,
+            rectangle split part fill={green!75!blue!50!white,green!10!white},
+            rectangle split draw splits=false,
+            rounded corners=2pt,
+            rectangle split part align={right,right},
+            draw=green!50!black,
+            minimum height=14pt}
+        }
+        \node[lib] (var){
+        \nodepart[text=green!25!black]{two}#1};
+        \node[text=white,font=\sffamily\bfseries\tiny,rotate=90] at ([xshift=6pt]var.west) {LIB};
+    }
+}
+
+\usepackage[subpreambles=true]{standalone}
+
+% Book's title and subtitle
+\title{
+\Huge \textbf{\sc Mnemosyne}\\%\footnote{This is a footnote.} \\ 
+\huge User Guide%\footnote{This is yet another footnote.}
+}
+% Author
+\author{\textsc{Christian Pilato}\thanks{USI Lugano, Switzerland (\url{christian.pilato@usi.ch})}}
+
+\begin{document}
+	
+\frontmatter
+\maketitle
+	
+\tableofcontents
+	
+\mainmatter
+	
+\chapter{Preface}
+\input{sec/preface}
+
+\chapter{Memory Optimization with Mnemosyne}\label{ch:methodology}
+\input{sec/methodology}
+
+\chapter{Tool Overview}\label{ch:tool}
+\input{sec/overview}
+
+\chapter{Memory Block Interface}\label{ch:mem_interface}
+\input{sec/memory}
+
+\chapter{PLM Controller Interface}\label{ch:proc_interface}
+\input{sec/process}
+
+\end{document}

@@ -1,0 +1,10 @@
+all: saed32nm virtex7
+
+saed32nm:
+	@CMAKE_INSTALL_PREFIX@/bin/mnemosyne --config config.cfg --memlib @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/saed32nm_memlib.yaml --target-verilog-dir ./output_saed32nm_verilog --target-export-dir ./output_saed32nm_export
+
+virtex7:
+	@CMAKE_INSTALL_PREFIX@/bin/mnemosyne --config config.cfg --memlib @CMAKE_INSTALL_PREFIX@/share/tech/virtex7/virtex7_memlib.yaml --target-verilog-dir ./output_virtex7_verilog --target-export-dir ./output_virtex7_export
+
+clean:
+	rm -rf output_* work

@@ -1,0 +1,130 @@
+name: saed32nm
+
+memory_ip:
+ - type           : wrap_saed32_16x4
+   width          : 4
+   height         : 16
+   area           : 2337.901284
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_16x4.v
+
+ - type           : wrap_saed32_16x8
+   width          : 8
+   height         : 16
+   area           : 2943.118779
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_16x8.v
+
+ - type           : wrap_saed32_16x16
+   width          : 16
+   height         : 16
+   area           : 4284.829252
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_16x16.v
+
+ - type           : wrap_saed32_16x32
+   width          : 32
+   height         : 16
+   area           : 7595.2668
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_16x32.v
+
+ - type           : wrap_saed32_32x4
+   width          : 4
+   height         : 32
+   area           : 2999.725675
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_32x4.v
+
+ - type           : wrap_saed32_32x8
+   width          : 8
+   height         : 32
+   area           : 3724.33152
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_32x8.v
+
+ - type           : wrap_saed32_32x16
+   width          : 16
+   height         : 32
+   area           : 5377.489646
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_32x16.v
+
+ - type           : wrap_saed32_32x22
+   width          : 22
+   height         : 32
+   area           : 6843.313512
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_32x22.v
+
+ - type           : wrap_saed32_32x32
+   width          : 32
+   height         : 32
+   area           : 9308.669634
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_32x32.v
+
+ - type           : wrap_saed32_32x39
+   width          : 39
+   height         : 32
+   area           : 11098.232412
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_32x39.v
+
+ - type           : wrap_saed32_64x4
+   width          : 4
+   height         : 64
+   area           : 4371.264906
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_64x4.v
+
+ - type           : wrap_saed32_64x8
+   width          : 8
+   height         : 64
+   area           : 5394.196842
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_64x8.v
+
+ - type           : wrap_saed32_64x16
+   width          : 16
+   height         : 64
+   area           : 7545.73167
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_64x16.v
+
+ - type           : wrap_saed32_64x32
+   width          : 32
+   height         : 64
+   area           : 12471.480648
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_64x32.v
+
+ - type           : wrap_saed32_128x4
+   width          : 4
+   height         : 128
+   area           : 7064.432826
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_128x4.v
+
+ - type           : wrap_saed32_128x8
+   width          : 8
+   height         : 128
+   area           : 8679.521808
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_128x8.v
+
+ - type           : wrap_saed32_128x16
+   width          : 16
+   height         : 128
+   area           : 11889.02499
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_128x16.v
+
+ - type           : wrap_saed32_128x32
+   width          : 32
+   height         : 128
+   area           : 18993.291834
+   interfaces     : [rw, rw]
+   file           : @CMAKE_INSTALL_PREFIX@/share/tech/saed32nm/wrap_saed32_128x32.v
+
+

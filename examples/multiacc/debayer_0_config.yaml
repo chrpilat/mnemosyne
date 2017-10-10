@@ -1,0 +1,42 @@
+arrays:
+
+  - name       : A0_bayer
+    height     : 12288
+    width      : 16
+    interfaces : [w, w, r]
+    processes  :
+      - name          : load_input
+        interfaces    : [0, 1]
+        write_pattern : linear
+      - name          : process_debayer
+        interfaces    : 2
+
+  - name       : B0_debayer_r
+    height     : 12264
+    width      : 16
+    interfaces : [w, r]
+    processes  :
+      - name       : process_debayer
+        interfaces : 0
+      - name       : store_output
+        interfaces : 1
+
+  - name       : B0_debayer_b
+    height     : 12264
+    width      : 16
+    interfaces : [w, r]
+    processes  :
+      - name       : process_debayer
+        interfaces : 0
+      - name       : store_output
+        interfaces : 1
+
+  - name       : B0_debayer_g
+    height     : 12264
+    width      : 16
+    interfaces : [w, r]
+    processes  :
+      - name       : process_debayer
+        interfaces : 0
+      - name       : store_output
+        interfaces : 1

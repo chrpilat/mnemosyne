@@ -1,0 +1,61 @@
+arrays:
+
+  - name       : A0
+    height     : 1024
+    width      : 32
+    interfaces : [w, r]
+    processes  :
+      - name       : load_input
+        interfaces : 0
+      - name       : rb_sort
+        interfaces : 1
+
+  - name       : A1
+    height     : 1024
+    width      : 32
+    interfaces : [w, r]
+    processes  :
+      - name       : load_input
+        interfaces : 0
+      - name       : rb_sort
+        interfaces : 1
+
+  - name       : B0
+    height     : 1024
+    width      : 32
+    interfaces : [w, r]
+    processes  :
+      - name       : merge_sort
+        interfaces : 0
+      - name       : store_output
+        interfaces : 1
+
+  - name       : B1
+    height     : 1024
+    width      : 32
+    interfaces : [w, r]
+    processes  :
+      - name       : merge_sort
+        interfaces : 0
+      - name       : store_output
+        interfaces : 1
+
+  - name       : C0
+    height     : 1024
+    width      : 32
+    interfaces : [w, r]
+    processes  :
+      - name       : rb_sort
+        interfaces : 0
+      - name       : merge_sort
+        interfaces : 1
+
+  - name       : C1
+    height     : 1024
+    width      : 32
+    interfaces : [w, r]    
+    processes  :
+      - name       : rb_sort
+        interfaces : 0
+      - name       : merge_sort
+        interfaces : 1

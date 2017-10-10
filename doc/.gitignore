@@ -1,0 +1,9 @@
+howto.pdf
+*.log
+*.aux
+.texpadtmp
+_minted-howto
+*.listing
+*.out
+*.sta
+*.toc

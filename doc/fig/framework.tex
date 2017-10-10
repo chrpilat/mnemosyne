@@ -1,0 +1,49 @@
+\documentclass{standalone}
+
+\usepackage{tikz}
+\usetikzlibrary{trees}
+\begin{document}
+\tikzstyle{every node}=[draw=black,thick,anchor=west]
+\tikzstyle{selected}=[draw=red,fill=red!30]
+\tikzstyle{optional}=[dashed,fill=gray!50]
+\begin{tikzpicture}[%
+  grow via three points={one child at (0.5,-0.7) and
+  two children at (0.5,-0.7) and (0.5,-1.4)},
+  edge from parent path={(\tikzparentnode.south) |- (\tikzchildnode.west)}]
+  \node {root}
+    child { node {common}}		
+    child { node [selected] {CortexSuite}
+%      child { node {pca}}
+%      child { node {srr}}
+%      child { node {disparity}}
+%      child { node {rbm}}
+    }
+%    child [missing] {}				
+%    child [missing] {}				
+%    child [missing] {}				
+%    child [missing] {}				
+    child { node [selected] {TAV}
+%      child { node {sort}}
+%      child { node {fft1d}}
+%      child { node {fft2d}}
+%      child { node {debayer}}
+%      child { node {change\_detection}}
+%      child { node {lucas\_kanade}}
+%      child { node {pfa\_interp1}}
+%      child { node {pfa\_interp2}}
+%      child { node {backprojection}}
+    }
+%    child [missing] {}				
+%    child [missing] {}				
+%    child [missing] {}				
+%    child [missing] {}				
+%    child [missing] {}				
+%    child [missing] {}				
+%    child [missing] {}				
+%    child [missing] {}				
+%    child [missing] {}				
+    child { node {doc}}
+    ;
+\end{tikzpicture}
+
+\end{document}

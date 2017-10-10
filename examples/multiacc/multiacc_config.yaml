@@ -1,0 +1,11 @@
+accelerator:
+
+  - name          : sort_0
+    cgraph        : ./sort_cgraph.yaml
+    acc_config    : ./sort_0_config.yaml
+    acc_interface : ./sort_0_interface.yaml
+
+  - name          : debayer_0
+    cgraph        : ./debayer_cgraph.yaml
+    acc_config    : ./debayer_0_config.yaml
+    acc_interface : ./debayer_0_interface.yaml

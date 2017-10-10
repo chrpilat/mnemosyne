@@ -1,0 +1,6 @@
+virtex7:
+	@/opt/mnemosyne/bin/mnemosyne --config config.cfg --memlib @CMAKE_INSTALL_PREFIX@/share/tech/virtex7/virtex7_memlib.yaml --target-verilog-dir ./output_verilog --target-export-dir ./output_export
+
+
+clean:
+	@rm -rf output_* work

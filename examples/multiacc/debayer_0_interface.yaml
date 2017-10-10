@@ -1,0 +1,212 @@
+name: debayer_0_unisim_rtl
+
+interface:
+
+   - id: A0_bayer_A0
+     dir: output
+     size: 14
+
+   - id: A0_bayer_A1
+     dir: output
+     size: 14
+
+   - id: A0_bayer_A2
+     dir: output
+     size: 14
+
+   - id: A0_bayer_CE0
+     dir: output
+     size: 1
+
+   - id: A0_bayer_CE1
+     dir: output
+     size: 1
+
+   - id: A0_bayer_CE2
+     dir: output
+     size: 1
+
+   - id: A0_bayer_D0
+     dir: output
+     size: 16
+
+   - id: A0_bayer_D1
+     dir: output
+     size: 16
+
+   - id: A0_bayer_Q2
+     dir: input
+     size: 16
+
+   - id: A0_bayer_WE0
+     dir: output
+     size: 1
+
+   - id: A0_bayer_WE1
+     dir: output
+     size: 1
+
+   - id: B0_debayer_b_A0
+     dir: output
+     size: 14
+
+   - id: B0_debayer_b_A1
+     dir: output
+     size: 14
+
+   - id: B0_debayer_b_CE0
+     dir: output
+     size: 1
+
+   - id: B0_debayer_b_CE1
+     dir: output
+     size: 1
+
+   - id: B0_debayer_b_D0
+     dir: output
+     size: 16
+
+   - id: B0_debayer_b_Q1
+     dir: input
+     size: 16
+
+   - id: B0_debayer_b_WE0
+     dir: output
+     size: 1
+
+   - id: B0_debayer_g_A0
+     dir: output
+     size: 14
+
+   - id: B0_debayer_g_A1
+     dir: output
+     size: 14
+
+   - id: B0_debayer_g_CE0
+     dir: output
+     size: 1
+
+   - id: B0_debayer_g_CE1
+     dir: output
+     size: 1
+
+   - id: B0_debayer_g_D0
+     dir: output
+     size: 16
+
+   - id: B0_debayer_g_Q1
+     dir: input
+     size: 16
+
+   - id: B0_debayer_g_WE0
+     dir: output
+     size: 1
+
+   - id: B0_debayer_r_A0
+     dir: output
+     size: 14
+
+   - id: B0_debayer_r_A1
+     dir: output
+     size: 14
+
+   - id: B0_debayer_r_CE0
+     dir: output
+     size: 1
+
+   - id: B0_debayer_r_CE1
+     dir: output
+     size: 1
+
+   - id: B0_debayer_r_D0
+     dir: output
+     size: 16
+
+   - id: B0_debayer_r_Q1
+     dir: input
+     size: 16
+
+   - id: B0_debayer_r_WE0
+     dir: output
+     size: 1
+
+   - id: bufdin_data
+     dir: input
+     size: 32
+
+   - id: bufdin_ready
+     dir: output
+     size: 1
+
+   - id: bufdin_valid
+     dir: input
+     size: 1
+
+   - id: bufdout_data
+     dir: output
+     size: 32
+
+   - id: bufdout_ready
+     dir: input
+     size: 1
+
+   - id: bufdout_valid
+     dir: output
+     size: 1
+
+   - id: clk
+     dir: input
+     size: 1
+
+   - id: conf_done
+     dir: input
+     size: 1
+
+   - id: conf_num_col
+     dir: input
+     size: 32
+
+   - id: conf_num_row
+     dir: input
+     size: 32
+
+   - id: debayer_done
+     dir: output
+     size: 1
+
+   - id: rd_grant
+     dir: input
+     size: 1
+
+   - id: rd_index
+     dir: output
+     size: 32
+
+   - id: rd_length
+     dir: output
+     size: 32
+
+   - id: rd_request
+     dir: output
+     size: 1
+
+   - id: rst
+     dir: input
+     size: 1
+
+   - id: wr_grant
+     dir: input
+     size: 1
+
+   - id: wr_index
+     dir: output
+     size: 32
+
+   - id: wr_length
+     dir: output
+     size: 32
+
+   - id: wr_request
+     dir: output
+     size: 1
+

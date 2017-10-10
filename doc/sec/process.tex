@@ -1,0 +1,103 @@
+This chapter describes the interface that {\sc Mnemosyne} assumes for
+the process interfaces of the accelerator logic. This can be used to
+create components that can interface with the generated memory
+wrappers.
+%%
+Given a process interface $n$ used to access a data structure of parameters {\tt width} and {\tt height}, {\sc
+  Mnemosyne} assumes that the interface features the following signals:
+\begin{itemize}
+\item {\tt An} (output) represents the offset inside the data structure
+(i.e. the logical address) to be accessed with the memory operation.  This
+signal has a size of {\tt $log_2(height)$} bits;
+\item {\tt CEn} (output, active high) indicates that there is an active
+request on the current process interface (i.e. a memory operation is accessing
+the corresponding data structure). This signal has a size of one bit.
+\item {\tt WEn} (output, active high) indicates that there is an active
+memory-write operation on the interface.  The input data is assumed to be valid
+in this case. This signal has a size of one bit.
+\item {\tt Dn} (output) specifies the data to be written (for
+  write operations). This signal has a size of $width$ bits.
+\item {\tt WEMn} (output) indicates the mask for write operations
+  (i.e. which bits of the input data have to be effectively written). This
+  signal has a size of $width$ bits.
+\item {\tt Qn} (input) is the output value produced by a read
+  operation. This signal has a size of $width$ bits.
+\end{itemize}
+
+\noindent Note that signals {\tt WEn}, {\tt WEMn}, and {\tt Dn} are
+available only for write interfaces, while signal {\tt Qn} is
+available only for read interfaces. All signals are available,
+instead, for read/write interfaces.
+
+{\sc Mnemosyne} generates the logic to translate the memory requests into
+proper memory requests to the physical memory IPs necessary to store the
+corresponding data structure. Specifically, it generates a PLM controller that
+contains a configuration of memory IPs that can store the corresponding data
+structure (more than one in case of bank reuse). This PLM controller has as many
+interfaces as the ones requested by the accelerator logic. It contains
+internally the logic for address translation.
+
+For example, a component \name{accelerator_logic} that needs to access
+a 2048$\times$32 array named {\tt A0} with two memory interfaces (one
+write and one read interface) has the interface:
+
+\begin{myverilog}{}
+module accelerator_logic (CLK,
+              //...
+              A0_CE0, A0_A0, A0_WE0, A0_D0, A0_WEM0,
+              A0_CE1, A0_A1, A0_Q1,
+              //...
+              );
+  input         CLK;
+  //.. other signals / interfaces
+  //write interface
+  output        A0_CE0;
+  output [10:0] A0_A0;
+  output        A0_WE0;
+  output [31:0] A0_D0;
+  output [31:0] A0_WEM0;
+  //read interface
+  output        A0_CE1;
+  output [10:0] A0_A1;
+  input  [31:0] A0_Q1;
+  //... other signals / interfaces
+  //... rest of the module
+endmodule 
+\end{myverilog}
+
+
+\noindent This module can be simply connected to the corresponding PLM 
+(see Section~\ref{ch:mem_interface} for its definition) with direct
+signals as follows:
+
+\begin{myverilog}{}
+module accelerator (CLK,
+              //...
+              //other signal / interfaces
+              //...
+              );
+  input         CLK;
+  //.. other signals / interfaces
+  //write interface signals
+  wire        A0_CE0;
+  wire [10:0] A0_A0;
+  wire        A0_WE0;
+  wire [31:0] A0_D0;
+  wire [31:0] A0_WEM0;
+  //read interface
+  wire        A0_CE1;
+  wire [10:0] A0_A1;
+  wire [31:0] A0_Q1;
+  //accelerator logic
+  accelerator_logic acc_0(.CLK(CLK), 
+      //...other signals / interfaces 
+      .A0_CE0(A0_CE0), .A0(A0_A0),
+      .A0_D0(A0_D0), .A0_WE0(A0_WE0), .A0_WEM0(A0_WEM0), 
+      .A0_CE1(A0_CE1), .A0_A1(A0_A1), .A0_Q1(A0_Q1));     
+  //PLM
+  array_A0 mem_0(.CLK(CLK),
+      .CE0(A0_CE0), A0(A0_A0), 
+      .D0(A0_D0), .WE0(A0_WE0), .WEM0(A0_WEM0),
+      .CE1(A0_CE1), A1(A0_A1), .Q1(A0_Q1));
+endmodule 
+\end{myverilog}
