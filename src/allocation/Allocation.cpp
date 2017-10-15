@@ -671,7 +671,7 @@ void Allocation::perform_allocation(const FunctorPtr opt_functor, unsigned int a
          bool comp = true;
          for (auto& j : c.second)
          {
-            if (std::get<0>(components->node_list[i]) == std::get<0>(j) and components->comp_list[j].find(components->node_list[i]) == components->comp_list[j].end() or
+            if ((std::get<0>(components->node_list[i]) == std::get<0>(j) and components->comp_list[j].find(components->node_list[i]) == components->comp_list[j].end()) or
                 ((active_sharing & (ADDRESS_SPACE | INTERFACE)) == 0))
             {
                comp = false;
