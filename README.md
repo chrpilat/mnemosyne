@@ -15,7 +15,7 @@ If you use the code, we would appreciate a citation to:
 > Christian Pilato, Paolo Mantovani, Giuseppe Di Guglielmo, and Luca P. Carloni.
 > IEEE Transactions on CAD of Integrated Circuits and Systems, 36:3, pages 435-448 (March 2017).
 
-For any questions/concerns, please email [Christian Pilato](christian.pilato@usi.ch).
+For any questions/concerns, please email [Christian Pilato](christian.pilato@polimi.it).
 
 ## Requirements: ##
 
@@ -84,6 +84,6 @@ Additional information can be found in the [Wiki](https://github.com/chrpilat/mn
 
 ### Contact ###
 
-Christian Pilato (USI Lugano): christian.pilato@usi.ch
+Christian Pilato (Politecnico di Milano): christian.pilato@polimi.it
 
 Luca P. Carloni (Columbia University): luca@cs.columbia.edu
