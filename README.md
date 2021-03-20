@@ -29,6 +29,7 @@ To build Mnemosyne, you will need to satisfy the following dependencies:
 5. libxml++-devel
 6. glpk-utils
 7. glpk-devel
+8. libboost-all-dev
 
 ### System configuration ####
 

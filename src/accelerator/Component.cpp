@@ -330,7 +330,7 @@ bool ComponentList::parse_config(const std::string& name, const std::string& acc
    return true;
 }
 
-void ComponentList::create_array(const std::string& name, const unsigned int width, unsigned int height, const std::string& interfaces)
+void ComponentList::create_array(const std::string& name, const unsigned int width, unsigned int height, const std::string& interfaces, const std::string& init_file)
 {
    top_name = name;
    ArrayPtr array(new Array);
@@ -338,6 +338,7 @@ void ComponentList::create_array(const std::string& name, const unsigned int wid
    array->accelerator = name;
    array->width = width;
    array->height = height;
+   array->parse_init_file(init_file);
 
    ProcessPtr proc(new Process);
    proc->name = name;

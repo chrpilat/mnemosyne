@@ -37,11 +37,14 @@
 
 #include "utils.hpp"
 
+#include "../rtl_architecture/rtl_architecture.hpp"
+
 FORWARD_DECL(Array);
 FORWARD_DECL(Interface);
 FORWARD_DECL(Memory);
 FORWARD_DECL(MemoryLibrary);
 FORWARD_DECL(Port);
+FORWARD_DECL(ModuleDef);
 
 struct Port
 {
@@ -54,7 +57,7 @@ struct Port
    std::string id;
    unsigned int size;
    dir_t dir;
-   std::string binding;
+   RtlNodePtr binding;
 
    void parse_config(const xmlpp::Node* node);
    PortPtr clone();
@@ -130,7 +133,7 @@ struct Wire
 {
    std::string id;
    unsigned int size;
-   std::string binding;
+   RtlNodePtr binding;
    bool is_buffered;
 };
 typedef boost::shared_ptr<Wire> WirePtr;
@@ -138,6 +141,8 @@ typedef boost::shared_ptr<Wire> WirePtr;
 struct MemoryWrapper
 {
    std::string id;
+
+   ModuleDefPtr module;
 
    std::vector<MemoryPtr> banks;
    std::map<ArrayPtr, std::map<InterfacePtr, WirePtr> > merge_selector;

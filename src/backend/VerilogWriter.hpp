@@ -41,20 +41,22 @@
 
 FORWARD_DECL(MemoryWrapper);
 FORWARD_DECL(Functor);
+FORWARD_DECL(RtlNode);
 
 class VerilogWriter : public Writer
 {
-      std::ofstream* os;
+      std::ofstream* out;
+      unsigned int spacing;
 
       bool has_to_generate_top_plm;
-
-      bool generate_wrapper(const MemoryWrapperPtr arch);
 
       void write_header(const std::string &output_file);
 
       void close_file();
 
       void generate_top_plm();
+
+      void write(const RtlNodePtr node);
 
    public:
 

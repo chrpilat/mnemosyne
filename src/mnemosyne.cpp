@@ -76,6 +76,7 @@ int main(int argc, char** argv)
    std::string acc_interface;
    bool generate_top_plm;
    std::string config_file;
+   std::string init_file;
 
    std::string mode;
    std::string interfaces;
@@ -105,6 +106,7 @@ int main(int argc, char** argv)
          ("interfaces", po::value<std::string>(&interfaces),                               "List of memory interfaces")
          ("width", po::value<unsigned int>(&width),                                        "Array bitwidth")
          ("height", po::value<unsigned int>(&height),                                      "Array height (in words)")
+         ("init_file", po::value<std::string>(&init_file),                                 "BRAM configuration file")   
          ;
 
    po::options_description opt_desc("Optimization-mode options");
@@ -277,6 +279,8 @@ int main(int argc, char** argv)
       DEBUG(DBG_VERBOSE, verbosity, std::setw(35) << std::left << std::string(2, '-') + "Width: " << width << std::endl);
       DEBUG(DBG_VERBOSE, verbosity, std::setw(35) << std::left << std::string(2, '-') + "Height: " << height << std::endl);
       DEBUG(DBG_VERBOSE, verbosity, std::setw(35) << std::left << std::string(2, '-') + "Interfaces: " << interfaces << std::endl);
+      if (init_file.size())
+	 DEBUG(DBG_VERBOSE, verbosity, std::setw(35) << std::left << std::string(2, '-') + "Initialization file: " << init_file << std::endl);
    }
 
    DEBUG(DBG_VERBOSE, verbosity, std::setw(35) << std::left << "Output:" << std::endl);
@@ -325,7 +329,7 @@ int main(int argc, char** argv)
       }
       else if (mode == "batch")
       {
-         components->create_array(name, width, height, interfaces);
+         components->create_array(name, width, height, interfaces, init_file);
       }
       PRINT("Number of arrays = " << components->id_to_buffer.size() << std::endl);
 

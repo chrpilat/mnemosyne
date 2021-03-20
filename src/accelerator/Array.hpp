@@ -57,6 +57,10 @@ struct Array
    unsigned int height;
    //! Bitwidth of the buffer.
    unsigned int width;
+   //! Initialization file (if any)
+   std::string init_file;
+   //! list of initialization values
+   std::vector<std::string> init_values;
 
    //! Number of parallel blocks to ensure enough bandwidth for parallel accesses
    unsigned p_blocks;
@@ -107,6 +111,7 @@ struct Array
 
    static unsigned int get_minimum_bsize(unsigned int size);
 
+   void parse_init_file(const std::string& init_file);
 };
 typedef boost::shared_ptr<Array> ArrayPtr;
 

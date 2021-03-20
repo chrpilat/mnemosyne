@@ -44,4 +44,10 @@
 #define SHARED_PTR(name) \
    typedef boost::shared_ptr<name> name##Ptr
 
+template <class T, class U>
+inline T* GetPointer(const boost::shared_ptr<U>& t)
+{
+   return dynamic_cast<T*>(t.get());
+}
+
 #endif

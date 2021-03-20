@@ -51,6 +51,7 @@ FORWARD_DECL(Tag);
 
 #include "Functor.hpp"
 #include "Component.hpp"
+#include "../rtl_architecture/rtl_architecture.hpp"
 
 class Allocation
 {
@@ -117,7 +118,7 @@ class Allocation
        */
       void perform_clique_partitioning(const FunctorPtr opt_functor, std::map<unsigned int, clique>& valid_partitions, std::map<clique, PartitionPtr>& computed_partitions);
 
-      MemoryWrapperPtr create_architecture(const PartitionPtr partition);
+      MemoryWrapperPtr create_architecture(const PartitionPtr partition, const std::string arch_name);
 
       void create_memory_interfaces(const PartitionPtr partition, const MemoryWrapperPtr arch);
       /**
@@ -131,9 +132,9 @@ class Allocation
       void createArrayArchitecture(const PartitionPtr partition, const MemoryWrapperPtr arch, const ArrayPtr buff, const std::string& prefix);
 
       void set_default_binding(const MemoryPtr bank, unsigned int mem_intf_idx);
-      std::string get_activation(const PartitionPtr partition, const MemoryPtr bank, unsigned int mem_intf, const binding_t& bind, const std::string &prefix);
-      void set_ce_binding(const InterfacePtr mem_intf, unsigned int mem_intf_idx, std::string activation);
-      void set_address_binding(const PartitionPtr partition, const ArrayPtr buff, const InterfacePtr proc_intf, const MemoryPtr bank, unsigned int mem_intf_idx, std::string activation, const std::string& prefix);
+      RtlNodePtr get_activation(const PartitionPtr partition, const MemoryPtr bank, unsigned int mem_intf, const binding_t& bind, const std::string &prefix);
+      void set_ce_binding(const InterfacePtr mem_intf, unsigned int mem_intf_idx, RtlNodePtr activation);
+      void set_address_binding(const PartitionPtr partition, const ArrayPtr buff, const InterfacePtr proc_intf, const MemoryPtr bank, unsigned int mem_intf_idx, RtlNodePtr activation, const std::string& prefix);
 
 public:
 

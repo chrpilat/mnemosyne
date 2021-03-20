@@ -4,6 +4,7 @@ ADD_SUBDIRECTORY(accelerator)
 ADD_SUBDIRECTORY(allocation)
 ADD_SUBDIRECTORY(plm_controller)
 ADD_SUBDIRECTORY(backend)
+ADD_SUBDIRECTORY(rtl_architecture)
 ADD_SUBDIRECTORY(utils)
 
 FIND_PACKAGE(
@@ -49,8 +50,9 @@ TARGET_LINK_LIBRARIES(
 mnemosyne
 lib-allocation
 lib-accelerator
-lib-plm_controller
 lib-backend
+lib-rtl_architecture
+lib-plm_controller
 yaml-cpp
 ${Boost_LIBRARIES}
 ${LibXML++_LIBRARIES}

@@ -8,7 +8,7 @@ FIND_PACKAGE(LibXML++ REQUIRED)
 FIND_PACKAGE(GLPK REQUIRED)
 SET(LIBS ${LIBS} ${LibXML++_LIBRARIES} )
 
-SET(CMAKE_CXX_FLAGS  ${CMAKE_CXX_FLAGS} "-std=c++0x -g -Wno-deprecated-declarations")
+SET(CMAKE_CXX_FLAGS  ${CMAKE_CXX_FLAGS} "-std=c++0x -g -Wno-deprecated-declarations -Wno-inconsistent-missing-override")
 
 ADD_SUBDIRECTORY(src)
 ADD_SUBDIRECTORY(examples)

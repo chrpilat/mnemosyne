@@ -39,6 +39,8 @@
 #include "Architecture.hpp"
 #include "PBlock.hpp"
 
+#include <fstream>
+
 Array::Array() :
    height(0),
    width(0),
@@ -179,6 +181,26 @@ unsigned int Array::get_minimum_bsize(unsigned int size)
    return pow(2, i);
 }
 
+
+void Array::parse_init_file(const std::string& _init_file)
+{
+   init_file = _init_file;
+   if (init_file.size() == 0) return;
+   if (!boost::filesystem::exists(init_file)) throw std::runtime_error("Missing initialization file \"" + init_file + "\"");
+   std::ifstream file(init_file);
+   if (file.is_open()) 
+   {
+      std::string line;
+      while (std::getline(file, line)) 
+      {
+         std::string reverse = std::string(line.rbegin(), line.rend());
+         init_values.push_back(reverse);
+         //std::cout << reverse << std::endl;
+      }
+      file.close();
+   }
+}
+
 ArrayList::ArrayList(unsigned int _verbosity) :
     verbosity(_verbosity)
 {
@@ -197,12 +219,18 @@ bool ArrayList::parse_config(const std::string& acc_name, const std::string& acc
       for(const auto& b_it : arrays)
       {
          std::string buffer_id = b_it["name"].as<std::string>();
+
          ///buffer information
          ArrayPtr buff = ArrayPtr(new Array);
          buff->name = buffer_id;
          buff->accelerator = acc_name;
          buff->height = b_it["height"].as<unsigned int>();
          buff->width = b_it["width"].as<unsigned int>();
+         if (b_it["init_file"])
+         {
+	    buff->parse_init_file(b_it["init_file"].as<std::string>());
+         }
+
          ///check interfaces
          YAML::Node interfaces = b_it["interfaces"];
          unsigned int idx = 0;
@@ -230,6 +258,7 @@ bool ArrayList::parse_config(const std::string& acc_name, const std::string& acc
             inter->idx = idx++;
             buff->interfaces.push_back(inter);
          }
+
          ///sharing information
          YAML::Node sharing = b_it["sharing"];
          for(const auto& s_it : sharing)

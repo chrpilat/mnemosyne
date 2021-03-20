@@ -49,4 +49,7 @@
 #define PRINT(mex) \
    std::cout << mex
 
+#define STR(mex) \
+   boost::lexical_cast<std::string>(mex)
+
 #endif

@@ -131,8 +131,9 @@ struct ComponentList
      * @param width is the bitwidth
      * @param height is the number of words
      * @param interfaces is the list of interfaces
+     * @param init_file is the name of the initialization file (if any)
      */
-    void create_array(const std::string& name, const unsigned int width, unsigned int height, const std::string& interfaces);
+   void create_array(const std::string& name, const unsigned int width, unsigned int height, const std::string& interfaces, const std::string& init_file);
 
     /**
      * @brief Parse the multi-component definitions

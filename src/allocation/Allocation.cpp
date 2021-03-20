@@ -45,6 +45,8 @@
 #include "UGraph.hpp"
 #include "Scenario.hpp"
 
+#include "rtl_architecture.hpp"
+
 #define GLPK_FILE "solver.mod"
 
 static
@@ -515,7 +517,7 @@ void Allocation::perform_clique_partitioning(const FunctorPtr opt_functor, std::
    DEBUG(DBG_VERBOSE, verbosity, std::endl);
    DEBUG(DBG_VERBOSE, verbosity, "** Reading glpk log = " + out_dir + "/solver.log" << std::endl);
    if (!boost::filesystem::exists(out_dir + "/solver.log"))
-      throw std::runtime_error("problem not correctly solved!");      
+      throw std::runtime_error("problem not correctly solved!");
    std::ifstream fileos ((out_dir + "/solver.log").c_str());
    DEBUG(DBG_VERBOSE, verbosity, std::endl);
 
@@ -547,12 +549,11 @@ void Allocation::perform_clique_partitioning(const FunctorPtr opt_functor, std::
          DEBUG(DBG_VERBOSE, verbosity, "Wrapper: \"" << arch_id << "\"" << std::endl);
          DEBUG(DBG_VERBOSE, verbosity, std::setw(25) << std::left << "  Arrays: " << std::setw(5) << std::left << id_to_clique[var].size() << " -- {" << buffers << "}" << std::endl);
 
-         MemoryWrapperPtr arch = create_architecture(p);
+         std::string arch_name = arch_id;
+         if (!compose_id)
+            arch_name = accelerator_name;
+         MemoryWrapperPtr arch = create_architecture(p, arch_name);
          opt_functor->wrappers[var] = arch;
-         if (compose_id)
-            opt_functor->wrappers[var]->id = arch_id;
-         else
-            opt_functor->wrappers[var]->id = accelerator_name;
          DEBUG(DBG_VERBOSE, verbosity, std::string(80, '+') << std::endl);
       }
    }
@@ -743,15 +744,16 @@ void Allocation::perform_allocation(const FunctorPtr opt_functor, unsigned int a
      print_xml_statistics(opt_functor);
 }
 
-void Allocation::set_ce_binding(const InterfacePtr mem_intf, unsigned int mem_intf_idx, std::string activation)
+void Allocation::set_ce_binding(const InterfacePtr mem_intf, unsigned int mem_intf_idx, RtlNodePtr activation)
 {
    //default value
-   if (mem_intf->enable->binding.size() == 0) mem_intf->enable->binding = "1'b0";
-   mem_intf->enable->binding = activation + " ? 1'b1 : (" + mem_intf->enable->binding + ")";
+   if (mem_intf->enable->binding == NULL) mem_intf->enable->binding = BinaryValue::create("1'b0");//"1'b0";
+   //mem_intf->enable->binding = activation + " ? 1'b1 : (" + mem_intf->enable->binding + ")";
+   mem_intf->enable->binding = CondOperation::create(activation, BinaryValue::create("1'b1"),  mem_intf->enable->binding);
    DEBUG(DBG_VERBOSE, verbosity, "     CE[" << mem_intf_idx << "] = { " << activation << " }" << std::endl);
 }
 
-void Allocation::set_address_binding(const PartitionPtr partition, const ArrayPtr buff, const InterfacePtr proc_intf, const MemoryPtr bank, unsigned int mem_intf_idx, std::string activation, const std::string& prefix)
+void Allocation::set_address_binding(const PartitionPtr partition, const ArrayPtr buff, const InterfacePtr proc_intf, const MemoryPtr bank, unsigned int mem_intf_idx, RtlNodePtr activation, const std::string& prefix)
 {
    TagPtr tag = partition->buffer_tag[buff];
    ///address signal
@@ -762,46 +764,62 @@ void Allocation::set_address_binding(const PartitionPtr partition, const ArrayPt
    else
       a_msb = tag->buff_size-1;
    assert(a_msb >= a_lsb);
-   std::string padding_str;
+   RtlNodePtr padding;
    if (a_msb >= tag->buff_size and partition->buffer_offset[buff] == 0)
    {
       unsigned int padd_num = (a_msb + 1 - tag->buff_size);
-      padding_str = "{" + boost::lexical_cast<std::string>(padd_num) + "{1'b0}}";
+      padding = ModuleRepeat::create(BinaryValue::create("1'b0"), IntegerValue::create(padd_num));
       a_msb = tag->buff_size-1;
    }
    if (tag->bank_size > tag->buff_size)
    {
       unsigned int padd_num = (tag->bank_size - tag->buff_size);
-      padding_str = "{" + boost::lexical_cast<std::string>(padd_num) + "{1'b0}}";
+      padding = ModuleRepeat::create(BinaryValue::create("1'b0"), IntegerValue::create(padd_num));
    }
 
    unsigned int buff_size = ceil((double)log(buff->height) / (double)log(2));
-   std::string abit_cast;
-   if (buff_size > 1)
-      abit_cast = "[" + boost::lexical_cast<std::string>(a_msb) + ":" + boost::lexical_cast<std::string>(a_lsb) + "]";
-   if (partition->buffer_offset[buff]) abit_cast += " + " + boost::lexical_cast<std::string>(partition->buffer_offset[buff]);
+   //std::string abit_cast;
+   //if (buff_size > 1)
+   //   abit_cast = "[" + boost::lexical_cast<std::string>(a_msb) + ":" + boost::lexical_cast<std::string>(a_lsb) + "]";
+   //if (partition->buffer_offset[buff]) abit_cast += " + " + boost::lexical_cast<std::string>(partition->buffer_offset[buff]);
 
    unsigned int bank_size = ceil((double)log(bank->height) / (double)log(2));
-   std::string str_buffer;
+   RtlNodePtr str_buffer;
    if (buff_size > 0)
    {
-      if (padding_str.size()) str_buffer = "{" + padding_str + ",";
-      str_buffer += prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx) + abit_cast;
-      if (padding_str.size()) str_buffer += "}";
+      //if (padding_str.size()) str_buffer = "{" + padding_str + ",";
+      //str_buffer += prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx) + abit_cast;
+      //if (padding_str.size()) str_buffer += "}";
+      str_buffer = RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx));
+      if (buff_size > 1){
+         str_buffer = Partselect::create(str_buffer, IntegerValue::create(a_msb), IntegerValue::create(a_lsb));
+      }
+
+      if (partition->buffer_offset[buff]) {
+         str_buffer = BinaryOperation::create(Operation::PLUS, str_buffer, IntegerValue::create(partition->buffer_offset[buff]));
+      }
+      if (padding != NULL) {
+         std::list<RtlNodePtr> items;
+         items.push_back(padding);
+         items.push_back(str_buffer);
+         str_buffer = Concat::create(items, false);
+      }
    }
    else
    {
-      str_buffer = "{" + boost::lexical_cast<std::string>(bank_size) + "{1'b0}}";
+      str_buffer = ModuleRepeat::create(BinaryValue::create("1'b0"), IntegerValue::create(bank_size));
+      //str_buffer = "{" + boost::lexical_cast<std::string>(bank_size) + "{1'b0}}";
    }
 
    const InterfacePtr mem_intf = bank->interfaces[mem_intf_idx];
    //address
-   if (mem_intf->address->binding.size() == 0) mem_intf->address->binding = "{" + boost::lexical_cast<std::string>(bank_size) + "{1'b0}}";
-   mem_intf->address->binding = activation + " ? " + str_buffer + " : (" + mem_intf->address->binding + ")";
+   if (mem_intf->address->binding == NULL) mem_intf->address->binding = ModuleRepeat::create(BinaryValue::create("1'b0"), IntegerValue::create(bank_size));
+   //mem_intf->address->binding = activation + " ? " + str_buffer + " : (" + mem_intf->address->binding + ")";
+   mem_intf->address->binding = CondOperation::create(activation, str_buffer, mem_intf->address->binding);
    DEBUG(DBG_VERBOSE, verbosity, "     A[" << mem_intf_idx << "] = { " << str_buffer << " }" << std::endl);
 }
 
-std::string Allocation::get_activation(const PartitionPtr partition, const MemoryPtr bank, unsigned int mem_intf_idx, const binding_t& bind, const std::string& prefix)
+RtlNodePtr Allocation::get_activation(const PartitionPtr partition, const MemoryPtr bank, unsigned int mem_intf_idx, const binding_t& bind, const std::string& prefix)
 {
    const ArrayPtr buff = std::get<0>(bind);
    InterfacePtr proc_intf = std::get<1>(bind);
@@ -813,30 +831,51 @@ std::string Allocation::get_activation(const PartitionPtr partition, const Memor
    TagPtr tag = partition->buffer_tag[buff];
 
    ///activation function
-   std::string activation = prefix + "CE" + boost::lexical_cast<std::string>(proc_intf->idx);
+   RtlNodePtr activation = RtlIdentifier::create(prefix + "CE" + boost::lexical_cast<std::string>(proc_intf->idx));
    if (tag->stag_size > 0)
    {
       unsigned int s_lsb = (buff->data_partitioning ? 0 : tag->ptag_size) + tag->mwtag_size + tag->mtag_size + tag->bank_size;
       unsigned int s_msb = tag->buff_size - 1;
       assert(s_msb >= s_lsb);
-      std::string sbit_cast = "[" + boost::lexical_cast<std::string>(s_msb) + ":" + boost::lexical_cast<std::string>(s_lsb) + "]";
-      activation += " & " + prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx) + sbit_cast + " == " + boost::lexical_cast<std::string>(s);
+      //std::string sbit_cast = "[" + boost::lexical_cast<std::string>(s_msb) + ":" + boost::lexical_cast<std::string>(s_lsb) + "]";
+      //activation += " & " + prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx) + sbit_cast + " == " + boost::lexical_cast<std::string>(s);
+      activation = BinaryOperation::create(Operation::EQ, 
+		      BinaryOperation::create(Operation::AND, 
+			 activation, 
+			 Partselect::create(RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx)),
+		            IntegerValue::create(s_msb),
+			    IntegerValue::create(s_lsb))),
+		      IntegerValue::create(s));
    }
    if (tag->ptag_size > 0)
    {
       unsigned int s_lsb = tag->mtag_size;
       unsigned int s_msb = tag->mtag_size + tag->ptag_size - 1;
       assert(s_msb >= s_lsb);
-      std::string sbit_cast = "[" + boost::lexical_cast<std::string>(s_msb) + ":" + boost::lexical_cast<std::string>(s_lsb) + "]";
-      activation += " & " + prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx) + sbit_cast + " == " + boost::lexical_cast<std::string>(p);
+      //std::string sbit_cast = "[" + boost::lexical_cast<std::string>(s_msb) + ":" + boost::lexical_cast<std::string>(s_lsb) + "]";
+      //activation += " & " + prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx) + sbit_cast + " == " + boost::lexical_cast<std::string>(p);
+      activation = BinaryOperation::create(Operation::EQ, 
+		      BinaryOperation::create(Operation::AND, 
+			 activation, 
+			 Partselect::create(RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx)),
+		            IntegerValue::create(s_msb),
+			    IntegerValue::create(s_lsb))),
+		      IntegerValue::create(p));
    }
    if (tag->mwtag_size > 0)
    {
       unsigned int s_lsb = 0;
       unsigned int s_msb = tag->mwtag_size - 1;
       assert(s_msb >= s_lsb);
-      std::string sbit_cast = "[" + boost::lexical_cast<std::string>(s_msb) + ":" + boost::lexical_cast<std::string>(s_lsb) + "]";
-      activation += " & " + prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx) + sbit_cast + " == " + boost::lexical_cast<std::string>(p % (buff->w_block_size / buff->split));
+      //std::string sbit_cast = "[" + boost::lexical_cast<std::string>(s_msb) + ":" + boost::lexical_cast<std::string>(s_lsb) + "]";
+      //activation += " & " + prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx) + sbit_cast + " == " + boost::lexical_cast<std::string>(p % (buff->w_block_size / buff->split));
+      activation = BinaryOperation::create(Operation::EQ, 
+		      BinaryOperation::create(Operation::AND, 
+			 activation, 
+			 Partselect::create(RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx)),
+		            IntegerValue::create(s_msb),
+			    IntegerValue::create(s_lsb))),
+		      IntegerValue::create(p % (buff->w_block_size / buff->split)));
    }
    DEBUG(DBG_VERBOSE, verbosity, "     activation = { " << activation << " }" << std::endl);
    return activation;
@@ -847,22 +886,22 @@ void Allocation::set_default_binding(const MemoryPtr bank, unsigned int mem_intf
    const InterfacePtr mem_intf = bank->interfaces[mem_intf_idx];
    unsigned int bank_size = ceil((double)log(bank->height) / (double)log(2));
    //enable
-   if (mem_intf->enable->binding.size() == 0) mem_intf->enable->binding = "1'b0";
+   if (mem_intf->enable->binding == NULL) mem_intf->enable->binding = BinaryValue::create("1'b0");
    //address
-   if (mem_intf->address->binding.size() == 0) mem_intf->address->binding = "{" + boost::lexical_cast<std::string>(bank_size) + "{1'b0}}";
+   if (mem_intf->address->binding == NULL) mem_intf->address->binding = ModuleRepeat::create(BinaryValue::create("1'b0"), IntegerValue::create(bank_size));
    //data_in
-   if (mem_intf->data_in->binding.size() == 0)
+   if (mem_intf->data_in->binding == NULL)
    {
-      mem_intf->data_in->binding = "1'b0";
-      if (bank->width > 1) mem_intf->data_in->binding = "{" + boost::lexical_cast<std::string>(bank->width) + "{" + mem_intf->data_in->binding + "}}";
+      mem_intf->data_in->binding = BinaryValue::create("1'b0");
+      if (bank->width > 1) mem_intf->data_in->binding = ModuleRepeat::create( mem_intf->data_in->binding, IntegerValue::create(bank->width));
    }
    //write enable
-   if (mem_intf->write_enable->binding.size() == 0) mem_intf->write_enable->binding = "1'b0";
+   if (mem_intf->write_enable->binding == NULL) mem_intf->write_enable->binding = BinaryValue::create("1'b0");
    //write mask
-   if (mem_intf->write_mask->binding.size() == 0)
+   if (mem_intf->write_mask->binding == NULL)
    {
-      mem_intf->write_mask->binding = "1'b0";
-      if (bank->width > 1) mem_intf->write_mask->binding = "{" + boost::lexical_cast<std::string>(bank->width) + "{" + mem_intf->write_mask->binding + "}}";
+      mem_intf->write_mask->binding = BinaryValue::create("1'b0");
+      if (bank->width > 1) mem_intf->write_mask->binding = ModuleRepeat::create( mem_intf->write_mask->binding, IntegerValue::create(bank->width));
    }
 }
 
@@ -948,9 +987,19 @@ void Allocation::create_memory_interfaces(const PartitionPtr partition, const Me
       ///creates the ports for each interface
       for(const auto& intf : b->interfaces)
       {
+         std::string comment = "buffer: " + b->name + " - process: " + intf->process_name  + " - interface: ";
+         if (intf->type == Interface::R)
+            comment += "R";
+         else if (intf->type == Interface::W)
+            comment += "W";
+         arch->module->add_portitem(RtlComment::create(comment));
+
          ///size of address provided by HLS tool is detemined by the size of the buffer
          unsigned int size = ceil(log((double)b->height) / log((double)2));
          std::string suffix = boost::lexical_cast<std::string>(intf->idx);
+         arch->module->add_port(ModulePort::create(prefix+"CE"+suffix, ModulePort::IN, ModulePort::CONTROL));
+         arch->module->add_port(ModulePort::create(prefix+"A"+suffix, size, ModulePort::IN, false, ModulePort::CONTROL));
+         
          intf->enable = PortPtr(new Port(prefix+"CE"+suffix, Port::IN, 1));
          intf->ports.push_back(intf->enable);
          intf->address = PortPtr(new Port(prefix+"A"+suffix, Port::IN, size));
@@ -958,19 +1007,40 @@ void Allocation::create_memory_interfaces(const PartitionPtr partition, const Me
          if (intf->type == Interface::W or intf->type == Interface::RW)
          {
             intf->data_in = PortPtr(new Port(prefix+"D"+suffix, Port::IN, b->width));
+            arch->module->add_port(ModulePort::create(prefix+"D"+suffix, b->width, ModulePort::IN, false, ModulePort::DATA));
             intf->ports.push_back(intf->data_in);
             intf->write_enable = PortPtr(new Port(prefix+"WE"+suffix, Port::IN, 1));
+            arch->module->add_port(ModulePort::create(prefix+"WE"+suffix, ModulePort::IN, ModulePort::CONTROL));
             intf->ports.push_back(intf->write_enable);
             intf->write_mask = PortPtr(new Port(prefix+"WEM"+suffix, Port::IN, b->width));
+            arch->module->add_port(ModulePort::create(prefix+"WEM"+suffix, b->width, ModulePort::IN, false, ModulePort::CONTROL));
             intf->ports.push_back(intf->write_mask);
          }
          if (intf->type == Interface::R or intf->type == Interface::RW)
          {
             intf->data_out = PortPtr(new Port(prefix+"Q"+suffix, Port::OUT, b->width));
+            arch->module->add_port(ModulePort::create(prefix+"Q"+suffix, b->width, ModulePort::OUT, false, ModulePort::DATA));
             intf->ports.push_back(intf->data_out);
          }
       }
    }
+}
+
+std::string dec2hex(unsigned int value, unsigned int digits)
+{
+   std::stringstream ss;
+   ss << std::hex << value;
+   std::string res(ss.str());
+   if (res.size() < digits)
+   {
+      std::string padding(digits - res.size(), '0');
+      res = padding + res;      
+   }
+   for (unsigned int i = 0; i < res.size(); i++)
+   {
+      res[i] = toupper(res[i]);
+   }
+   return res;
 }
 
 void Allocation::createArrayArchitecture(const PartitionPtr partition, const MemoryWrapperPtr arch, const ArrayPtr buff, const std::string& prefix)
@@ -992,38 +1062,44 @@ void Allocation::createArrayArchitecture(const PartitionPtr partition, const Mem
       {
          DEBUG(DBG_VERBOSE, verbosity, " Read interface idx = " << buff_intf->idx << std::endl);
          DEBUG(DBG_VERBOSE, verbosity, "  +Merge selector = " << arch->merge_selector[buff][buff_intf]->id << std::endl);
-         std::string bind_str;
+         RtlNodePtr bind_str;
          if (arch->banks.size() == 1)
-            bind_str = arch->banks[0]->id + "_Q" + boost::lexical_cast<std::string>(mem_idx);
+            bind_str = RtlIdentifier::create(arch->banks[0]->id + "_Q" + boost::lexical_cast<std::string>(mem_idx));
          else
          {
-            bind_str = "Q" + boost::lexical_cast<std::string>(mem_idx) + "_out";
-            bind_str += "[sel_Q1_" + prefix + boost::lexical_cast<std::string>(buff_intf->idx) + "]";
+            bind_str = RtlIdentifier::create("Q" + boost::lexical_cast<std::string>(mem_idx) + "_out");
+            bind_str = Pointer::create(bind_str, RtlIdentifier::create("sel_Q1_" + prefix + boost::lexical_cast<std::string>(buff_intf->idx)));
          }
          for(unsigned int i = 0; i < buff->merge; i++)
          {
-            if (buff_intf->data_out->binding.size() == 0)
-               buff_intf->data_out->binding = "{" + boost::lexical_cast<std::string>(buff->width) + "{1'b0}}";
+            if (buff_intf->data_out->binding == NULL)
+               buff_intf->data_out->binding = ModuleRepeat::create(BinaryValue::create("1'b0"), IntegerValue::create(buff->width));
             unsigned int lsb = buff->width * i;
             unsigned int msb = (buff->width * (i+1))-1;
             assert(msb >= lsb);
             std::string bit_cast = "[" + boost::lexical_cast<std::string>(msb) + ":" + boost::lexical_cast<std::string>(lsb) + "]";
-            DEBUG(DBG_VERBOSE, verbosity, "  +Merge (" << i << ") = " << bind_str + bit_cast << std::endl);
-            buff_intf->data_out->binding = arch->merge_selector[buff][buff_intf]->id + " == " + boost::lexical_cast<std::string>(i) + " ? " + bind_str + bit_cast + " : (" + buff_intf->data_out->binding + ")";
+            DEBUG(DBG_VERBOSE, verbosity, "  +Merge (" << i << ") = " << bind_str << bit_cast << std::endl);
+            //buff_intf->data_out->binding = arch->merge_selector[buff][buff_intf]->id + " == " + boost::lexical_cast<std::string>(i) + " ? " + bind_str + bit_cast + " : (" + buff_intf->data_out->binding + ")";
+            buff_intf->data_out->binding = CondOperation::create( 
+                  //RtlIdentifier::create(arch->merge_selector[buff][buff_intf]->id + " == " + boost::lexical_cast<std::string>(i)), 
+                  BinaryOperation::create(Operation::EQ, RtlIdentifier::create(arch->merge_selector[buff][buff_intf]->id), IntegerValue::create(i)),
+                  //RtlIdentifier::create( bind_str + bit_cast), 
+                  Partselect::create(bind_str, IntegerValue::create(msb), IntegerValue::create(lsb)),
+                  buff_intf->data_out->binding);
          }
 
-         if (arch->merge_selector[buff][buff_intf]->binding.size() == 0)
+         if (arch->merge_selector[buff][buff_intf]->binding == NULL)
          {
-            arch->merge_selector[buff][buff_intf]->binding = "{" + boost::lexical_cast<std::string>(arch->merge_selector[buff][buff_intf]->size) + "{1'b0}}";
+            arch->merge_selector[buff][buff_intf]->binding = ModuleRepeat::create(BinaryValue::create("1'b0"), IntegerValue::create(arch->merge_selector[buff][buff_intf]->size));
          }
 
          TagPtr tag = partition->buffer_tag[buff];
          unsigned int lsb = 0;
          unsigned int msb = tag->mtag_size-1;
          assert(msb >= lsb);
-         std::string bit_cast = "[" + boost::lexical_cast<std::string>(msb) + ":" + boost::lexical_cast<std::string>(lsb) + "]";
-         std::string activation = prefix + "CE" + boost::lexical_cast<std::string>(buff_intf->idx);
-         arch->merge_selector[buff][buff_intf]->binding = activation + " ? "+ prefix + "A" + boost::lexical_cast<std::string>(buff_intf->idx) + bit_cast + " : (" + arch->merge_selector[buff][buff_intf]->binding + ")";
+         //std::string bit_cast = "[" + boost::lexical_cast<std::string>(msb) + ":" + boost::lexical_cast<std::string>(lsb) + "]";
+         RtlNodePtr activation = RtlIdentifier::create(prefix + "CE" + boost::lexical_cast<std::string>(buff_intf->idx));
+         arch->merge_selector[buff][buff_intf]->binding = CondOperation::create(activation, Partselect::create(RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(buff_intf->idx)), IntegerValue::create(msb), IntegerValue::create(lsb)), arch->merge_selector[buff][buff_intf]->binding);
       }
    }
 
@@ -1045,23 +1121,27 @@ void Allocation::createArrayArchitecture(const PartitionPtr partition, const Mem
       }
       for (const auto& buff_intf : read_split_interfaces)
       {
-         std::string align_str;
+         //std::string align_str;
+         std::list<RtlNodePtr> align_list;
          for (const auto& it : buff_intf.second)
          {
             unsigned int s_idx = std::get<1>(std::get<0>(it));
-            if (align_str.size())
-               align_str = "," + align_str;
+            //if (align_str.size())
+            //   align_str = "," + align_str;
             std::string slice;
+            RtlNodePtr align_item;
+            align_item = Pointer::create(RtlIdentifier::create("Q" + boost::lexical_cast<std::string>(1) + "_out"), RtlIdentifier::create(arch->split_selector[buff][buff_intf.first][s_idx]->id));
             if (s_idx+1 == buff->split)
             {
                if ((s_idx+1) * arch->banks[0]->width > buff->width)
                {
-                  slice = "[" + boost::lexical_cast<std::string>(buff->width - (s_idx) * arch->banks[0]->width - 1) + ":0]";
+                  align_item = Partselect::create(align_item, IntegerValue::create(buff->width - (s_idx) * arch->banks[0]->width - 1), IntegerValue::create(0));
+                  //slice = "[" + boost::lexical_cast<std::string>(buff->width - (s_idx) * arch->banks[0]->width - 1) + ":0]";
                }
             }
-            align_str = "Q" + boost::lexical_cast<std::string>(1) + "_out[" + arch->split_selector[buff][buff_intf.first][s_idx]->id + "]" + slice + align_str;
-            buff_intf.first->data_out->binding = "{" + align_str + "}";
+            align_list.push_back(align_item);
          }
+         buff_intf.first->data_out->binding = Concat::create(align_list, false);
       }
    }
 
@@ -1078,6 +1158,63 @@ void Allocation::createArrayArchitecture(const PartitionPtr partition, const Mem
          DEBUG(DBG_VERBOSE, verbosity, "PBlock = " << p << " :: ");
          DEBUG(DBG_VERBOSE, verbosity, "SBlock = " << s << " :: ");
          DEBUG(DBG_VERBOSE, verbosity, "BankId = " << bank_id << std::endl);
+
+         if (buff->init_values.size())
+         {
+            unsigned int start_value = s * bank->height;
+            unsigned int end_value = (s+1) * bank->height;
+            DEBUG(DBG_VERBOSE, verbosity, "Init" << std::endl);
+            for (unsigned int it = start_value; it < end_value; it++)
+            {
+               std::string value = buff->init_values[it];
+               //DEBUG(DBG_VERBOSE, verbosity, "  " << value << std::endl);
+               if (value.size() < bank->width)
+               {
+                  std::string padding(bank->width - value.size(), '0');
+                  value = value + padding;      
+               }
+               bank->init_values.push_back(value);
+            }
+            unsigned int values = 256/bank->width;
+            for (unsigned int a = 0; a < ceil(bank->init_values.size()/values); a++)
+            {
+               std::string hexaddress = dec2hex(a, 2);
+               std::string tot_value;
+               std::string hex_value;
+               for (unsigned int val = a*values; val < (a+1)*values; val++)
+               {
+                  std::string value;
+                  if (val >= bank->init_values.size())
+                     value = std::string(bank->width, '0');
+                  else
+                     value = bank->init_values[val];
+                  value = std::string(value.rbegin(), value.rend());
+                  tot_value = value + tot_value;
+               }
+               for (size_t j = 0; j < tot_value.size(); j += 4)
+               {
+                  std::string tmp = tot_value.substr(j, 4);
+                  if      (!tmp.compare("0000")) hex_value += "0";
+                  else if (!tmp.compare("0001")) hex_value += "1";
+                  else if (!tmp.compare("0010")) hex_value += "2";
+                  else if (!tmp.compare("0011")) hex_value += "3";
+                  else if (!tmp.compare("0100")) hex_value += "4";
+                  else if (!tmp.compare("0101")) hex_value += "5";
+                  else if (!tmp.compare("0110")) hex_value += "6";
+                  else if (!tmp.compare("0111")) hex_value += "7";
+                  else if (!tmp.compare("1000")) hex_value += "8";
+                  else if (!tmp.compare("1001")) hex_value += "9";
+                  else if (!tmp.compare("1010")) hex_value += "A";
+                  else if (!tmp.compare("1011")) hex_value += "B";
+                  else if (!tmp.compare("1100")) hex_value += "C";
+                  else if (!tmp.compare("1101")) hex_value += "D";
+                  else if (!tmp.compare("1110")) hex_value += "E";
+                  else if (!tmp.compare("1111")) hex_value += "F";
+                  else continue;
+               }
+               bank->param_map["INIT_"+hexaddress] = BinaryValue::create(BinaryValue::HEX, 256, hex_value);
+            }
+         }
 
          for (const auto& idx : pb->interfaces)
          {
@@ -1101,38 +1238,56 @@ void Allocation::createArrayArchitecture(const PartitionPtr partition, const Mem
                ///START of merge WRITE
                for (const auto& m : write_merge_interfaces)
                {
-                  std::string data_in, data_we, data_wmask;
-                  std::string activation;
+                  //std::string data_in, data_we, data_wmask;
+                  std::list<RtlNodePtr> data_in_items, data_wmask_items;
+                  RtlNodePtr data_in, data_we, data_wmask;
+                  RtlNodePtr activation;
                   for (const auto& it : m.second)
                   {
                      const InterfacePtr buff_intf = std::get<0>(it);
                      std::string intf_idx = boost::lexical_cast<std::string>(buff_intf->idx);
                      binding_t bind(buff, buff_intf, bank_id, idx.first, p, s);
-                     std::string l_activation = get_activation(partition, bank, idx.first, bind, prefix);
+                     RtlNodePtr data_in_item, data_we_item, data_wmask_item;
+                     RtlNodePtr l_activation = get_activation(partition, bank, idx.first, bind, prefix);
                      ///chip enable
                      set_ce_binding(bank->interfaces[idx.first], idx.first, l_activation);
                      ///address
                      set_address_binding(partition, buff, buff_intf, bank, idx.first, l_activation, prefix);
-                     if (data_in.size())
-                        data_in = "," + data_in;
-                     if (data_we.size())
-                        data_we = " | " + data_we;
-                     if (data_wmask.size())
-                        data_wmask = "," + data_wmask;
-                     data_in = prefix + "D" + intf_idx + data_in;
-                     data_we = prefix + "WE" + intf_idx + data_we;
-                     data_wmask = prefix + "WEM" + intf_idx + data_wmask;
-                     if (activation.size())
-                        activation += " || ";
-                     activation += l_activation;
+                     //if (data_in.size())
+                     //   data_in = "," + data_in;
+                     //if (data_we.size())
+                     //   data_we = " | " + data_we;
+                     //if (data_wmask.size())
+                     //   data_wmask = "," + data_wmask;
+                     data_in_item = RtlIdentifier::create(prefix + "D" + intf_idx);
+                     data_we_item = RtlIdentifier::create(prefix + "WE" + intf_idx);
+                     data_wmask_item = RtlIdentifier::create(prefix + "WEM" + intf_idx);
+
+                     data_in_items.push_front(data_in_item);
+                     if (data_we == NULL) {
+                        data_we = data_we_item;
+                     } else {
+                        data_we = BinaryOperation::create(Operation::OR, data_we_item, data_we);
+                     }
+                     data_wmask_items.push_front(data_wmask_item);
+                     //if (activation != NULL)
+                     //   activation += " || ";
+                     //activation += l_activation;
+                     if (activation == NULL) {
+                        activation = l_activation;
+                     } else { 
+                        activation = BinaryOperation::create(Operation::LOR, activation, l_activation);
+                     }
                   }
                   const InterfacePtr mem_intf = bank->interfaces[idx.first];
+                  data_in = Concat::create(data_in_items, false);
+                  data_wmask = Concat::create(data_wmask_items, false);
                   DEBUG(DBG_VERBOSE, verbosity, "     D[" << idx.first << "] = { " << data_in << " }" << std::endl);
                   DEBUG(DBG_VERBOSE, verbosity, "     WE[" << idx.first << "] = { " << data_we << " }" << std::endl);
                   DEBUG(DBG_VERBOSE, verbosity, "     WEM[" << idx.first << "] = { " << data_wmask << " }" << std::endl);
-                  mem_intf->data_in->binding = activation + " ? {" + data_in + "} : (" + mem_intf->data_in->binding + ")";
-                  mem_intf->write_enable->binding = activation + " ? (" + data_we + ") : (" + mem_intf->write_enable->binding + ")";
-                  mem_intf->write_mask->binding = activation + " ? {" + data_wmask + "} : (" + mem_intf->write_mask->binding + ")";
+                  mem_intf->data_in->binding = CondOperation::create(activation, data_in, mem_intf->data_in->binding);
+                  mem_intf->write_enable->binding = CondOperation::create(activation, data_we, mem_intf->write_enable->binding);
+                  mem_intf->write_mask->binding = CondOperation::create(activation, data_wmask, mem_intf->write_mask->binding);
                }
                ///END of merge WRITE
 
@@ -1143,16 +1298,16 @@ void Allocation::createArrayArchitecture(const PartitionPtr partition, const Mem
                   {
                      const InterfacePtr buff_intf = std::get<0>(it);
                      binding_t bind(buff, buff_intf, bank_id, idx.first, p, s);
-                     std::string activation = get_activation(partition, bank, idx.first, bind, prefix);
+                     RtlNodePtr activation = get_activation(partition, bank, idx.first, bind, prefix);
 
                      set_ce_binding(bank->interfaces[idx.first], idx.first, activation);
                      set_address_binding(partition, buff, buff_intf, bank, idx.first, activation, prefix);
 
                      if (partition->num_banks > 1)
                      {
-                        if (bank->selector[idx.first][buff_intf]->binding.size() == 0)
-                           bank->selector[idx.first][buff_intf]->binding = "{" + boost::lexical_cast<std::string>(bank->selector[idx.first][buff_intf]->size) + "{1'b0}}";
-                        bank->selector[idx.first][buff_intf]->binding = activation + " ? " + boost::lexical_cast<std::string>(bank_id) + " : (" + bank->selector[idx.first][buff_intf]->binding + ")";
+                        if (bank->selector[idx.first][buff_intf]->binding == NULL)
+                           bank->selector[idx.first][buff_intf]->binding = ModuleRepeat::create(BinaryValue::create("1'b0"), IntegerValue::create(bank->selector[idx.first][buff_intf]->size));
+                        bank->selector[idx.first][buff_intf]->binding = CondOperation::create(activation, RtlIdentifier::create(boost::lexical_cast<std::string>(bank_id)),  bank->selector[idx.first][buff_intf]->binding);
                      }
                   }
                }
@@ -1175,10 +1330,12 @@ void Allocation::createArrayArchitecture(const PartitionPtr partition, const Mem
                      const InterfacePtr mem_intf = bank->interfaces[mem_intf_idx];
                      set_default_binding(bank, mem_intf_idx);
 
-                     std::string activation = get_activation(partition, bank, mem_intf_idx, bind, prefix);
+                     RtlNodePtr activation = get_activation(partition, bank, mem_intf_idx, bind, prefix);
                      set_ce_binding(bank->interfaces[mem_intf_idx], mem_intf_idx, activation);
                      set_address_binding(partition, buff, buff_intf, bank, mem_intf_idx, activation, prefix);
 
+                     RtlNodePtr d_binding = RtlIdentifier::create(prefix + "D" + boost::lexical_cast<std::string>(buff_intf->idx));
+                     RtlNodePtr wem_binding = RtlIdentifier::create(prefix + "WEM" + boost::lexical_cast<std::string>(buff_intf->idx));
                      std::string dinbit_cast;
                      unsigned int din_lsb = 0, din_msb = 0;
                      if (buff->width > 1)
@@ -1190,21 +1347,25 @@ void Allocation::createArrayArchitecture(const PartitionPtr partition, const Mem
                         {
                            din_msb = buff->width - 1;
                         }
-                        dinbit_cast = "[" + boost::lexical_cast<std::string>(din_msb) + ":" + boost::lexical_cast<std::string>(din_lsb) + "]";
+                        d_binding = Partselect::create(d_binding, IntegerValue::create(din_msb), IntegerValue::create(din_lsb));
+                        wem_binding = Partselect::create(wem_binding, IntegerValue::create(din_msb), IntegerValue::create(din_lsb));
+                        //dinbit_cast = "[" + boost::lexical_cast<std::string>(din_msb) + ":" + boost::lexical_cast<std::string>(din_lsb) + "]";
                      }
-                     std::string binding = prefix + "D" + boost::lexical_cast<std::string>(buff_intf->idx) + dinbit_cast;
                      if (din_msb+1 < bank->width*(s_idx+1)) //data padding
                      {
-                        binding = "{{" + boost::lexical_cast<std::string>(bank->width*(s_idx+1)-(din_msb+1)) + "{1'b0}}," + binding + "}";
+                        std::list<RtlNodePtr> d_items, wem_items;
+                        RtlNodePtr padding = ModuleRepeat::create(BinaryValue::create("1'b0"), IntegerValue::create(bank->width*(s_idx+1)-(din_msb+1)));
+                        d_items.push_back(padding);
+                        d_items.push_back(d_binding);
+                        d_binding = Concat::create(d_items, false);
+                        wem_items.push_back(padding);
+                        wem_items.push_back(wem_binding);
+                        wem_binding = Concat::create(wem_items, false);
+                        //binding = "{{" + boost::lexical_cast<std::string>(bank->width*(s_idx+1)-(din_msb+1)) + "{1'b0}}," + binding + "}";
                      }
-                     mem_intf->data_in->binding = activation + " ? " + binding + " : (" + mem_intf->data_in->binding + ")";
-                     mem_intf->write_enable->binding = activation + " ? " + prefix + "WE" + boost::lexical_cast<std::string>(buff_intf->idx) + " : (" + mem_intf->write_enable->binding + ")";
-                     binding = prefix + "WEM" + boost::lexical_cast<std::string>(buff_intf->idx) + dinbit_cast;
-                     if (din_msb+1 < bank->width*(s_idx+1))
-                     {
-                        binding = "{{" + boost::lexical_cast<std::string>(bank->width*(s_idx+1)-(din_msb+1)) + "{1'b0}}," + binding + "}";
-                     }
-                     mem_intf->write_mask->binding = activation + " ? " + binding + " : (" + mem_intf->write_mask->binding + ")";
+                     mem_intf->data_in->binding = CondOperation::create(activation, d_binding, mem_intf->data_in->binding);
+                     mem_intf->write_enable->binding = CondOperation::create(activation, RtlIdentifier::create(prefix + "WE" + boost::lexical_cast<std::string>(buff_intf->idx)),  mem_intf->write_enable->binding);
+                     mem_intf->write_mask->binding = CondOperation::create(activation, wem_binding, mem_intf->write_mask->binding);
                   }
                }
             }
@@ -1219,7 +1380,7 @@ void Allocation::createArrayArchitecture(const PartitionPtr partition, const Mem
 
                   if (buff_intf->type == Interface::R or buff_intf->type == Interface::RW)
                   {
-                     std::string activation = get_activation(partition, bank, idx.first, bind, prefix);
+                     RtlNodePtr activation = get_activation(partition, bank, idx.first, bind, prefix);
                      set_ce_binding(bank->interfaces[idx.first], idx.first, activation);
                      set_address_binding(partition, buff, buff_intf, bank, idx.first, activation, prefix);
                   }
@@ -1241,13 +1402,13 @@ void Allocation::createArrayArchitecture(const PartitionPtr partition, const Mem
                      }
                   }
                   if (!found) continue;
-                  std::string local_act = prefix + "CE" + boost::lexical_cast<std::string>(buff_intf->idx);
-                  if (arch->split_selector[buff][buff_intf][i]->binding.size() == 0)
+                  RtlNodePtr local_act = RtlIdentifier::create(prefix + "CE" + boost::lexical_cast<std::string>(buff_intf->idx));
+                  if (arch->split_selector[buff][buff_intf][i]->binding == NULL)
                   {
                      if (arch->split_selector[buff][buff_intf][i]->size == 1)
-                        arch->split_selector[buff][buff_intf][i]->binding = "1'b0";
+                        arch->split_selector[buff][buff_intf][i]->binding = BinaryValue::create("1'b0");
                      else
-                        arch->split_selector[buff][buff_intf][i]->binding = "{" + boost::lexical_cast<std::string>(arch->split_selector[buff][buff_intf][i]->size) + "{1'b0}}";
+                        arch->split_selector[buff][buff_intf][i]->binding = ModuleRepeat::create(BinaryValue::create("1'b0"), IntegerValue::create(arch->split_selector[buff][buff_intf][i]->size));
                   }
                   if (partition->buffer_configuration[buff][p].size() > 1)
                   {
@@ -1256,10 +1417,18 @@ void Allocation::createArrayArchitecture(const PartitionPtr partition, const Mem
                      unsigned int s_lsb = tag->ptag_size + tag->bank_size;
                      unsigned int s_msb = tag->buff_size - 1;
                      assert(s_msb >= s_lsb);
-                     std::string sbit_cast = "[" + boost::lexical_cast<std::string>(s_msb) + ":" + boost::lexical_cast<std::string>(s_lsb) + "]";
-                     local_act += " && " + prefix + "A" + boost::lexical_cast<std::string>(buff_intf->idx) + sbit_cast + " == " + boost::lexical_cast<std::string>(s);
+                     //std::string sbit_cast = "[" + boost::lexical_cast<std::string>(s_msb) + ":" + boost::lexical_cast<std::string>(s_lsb) + "]";
+                     //local_act += " && " + prefix + "A" + boost::lexical_cast<std::string>(buff_intf->idx) + sbit_cast + " == " + boost::lexical_cast<std::string>(s);
+                     local_act = BinaryOperation::create(Operation::EQ, 
+               		      BinaryOperation::create(Operation::LAND, 
+               			 local_act, 
+               			 Partselect::create(RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(buff_intf->idx)),
+               		            IntegerValue::create(s_msb),
+               			    IntegerValue::create(s_lsb))),
+               		      RtlIdentifier::create(boost::lexical_cast<std::string>(s)));
                   }
-                  arch->split_selector[buff][buff_intf][i]->binding = local_act + " ? "+ boost::lexical_cast<std::string>(bank_id) + " : (" + arch->split_selector[buff][buff_intf][i]->binding + ")";
+                  arch->split_selector[buff][buff_intf][i]->binding = CondOperation::create(local_act, RtlIdentifier::create(boost::lexical_cast<std::string>(bank_id)), arch->split_selector[buff][buff_intf][i]->binding);
+
                }
             }
             else // not split
@@ -1273,25 +1442,23 @@ void Allocation::createArrayArchitecture(const PartitionPtr partition, const Mem
                         continue;
                      binding_t bind(buff, buff_intf, bank_id, idx.first, p, s);
 
-                     std::string bind_str;
                      if (partition->num_banks > 1)
                      {
-                        std::string activation = get_activation(partition, bank, idx.first, bind, prefix);
-                        if (bank->selector[idx.first][buff_intf]->binding.size() == 0)
-                           bank->selector[idx.first][buff_intf]->binding = "{" + boost::lexical_cast<std::string>(bank->selector[idx.first][buff_intf]->size) + "{1'b0}}";
-                        bank->selector[idx.first][buff_intf]->binding = activation + " ? " + boost::lexical_cast<std::string>(bank_id) + " : (" + bank->selector[idx.first][buff_intf]->binding + ")";
+                        RtlNodePtr activation = get_activation(partition, bank, idx.first, bind, prefix);
+                        if (bank->selector[idx.first][buff_intf]->binding == NULL)
+                           bank->selector[idx.first][buff_intf]->binding = ModuleRepeat::create(BinaryValue::create("1'b0"), IntegerValue::create(bank->selector[idx.first][buff_intf]->size));
+                        bank->selector[idx.first][buff_intf]->binding = CondOperation::create(activation, IntegerValue::create(bank_id),  bank->selector[idx.first][buff_intf]->binding);
 
-                        bind_str = "Q" + boost::lexical_cast<std::string>(idx.first) + "_out[sel_Q1_" + prefix + boost::lexical_cast<std::string>(buff_intf->idx) + "]";
-                        buff_intf->data_out->binding = bind_str;
+                        buff_intf->data_out->binding = Pointer::create(RtlIdentifier::create("Q" + boost::lexical_cast<std::string>(idx.first) + "_out"),RtlIdentifier::create("sel_Q1_" + prefix + boost::lexical_cast<std::string>(buff_intf->idx)));
                         if (bank->width > buff->width)
-                           buff_intf->data_out->binding += "[" + boost::lexical_cast<std::string>(buff->width-1) + ":0]";
+                           //buff_intf->data_out->binding += "[" + boost::lexical_cast<std::string>(buff->width-1) + ":0]";
+                           buff_intf->data_out->binding = Partselect::create(buff_intf->data_out->binding, IntegerValue::create(buff->width-1), IntegerValue::create(0));
                      }
                      else
                      {
-                        bind_str = bank->id + "_" + bank->interfaces[idx.first]->data_out->id;
-                        buff_intf->data_out->binding = bind_str;
+                        buff_intf->data_out->binding = RtlIdentifier::create(bank->id + "_" + bank->interfaces[idx.first]->data_out->id);
                         if (bank->width > buff->width)
-                           buff_intf->data_out->binding += "[" + boost::lexical_cast<std::string>(buff->width-1) + ":0]";
+                           buff_intf->data_out->binding = Partselect::create(buff_intf->data_out->binding, IntegerValue::create(buff->width-1), IntegerValue::create(0));
                      }
                   }
                }
@@ -1303,9 +1470,12 @@ void Allocation::createArrayArchitecture(const PartitionPtr partition, const Mem
 }
 
 
-MemoryWrapperPtr Allocation::create_architecture(const PartitionPtr partition)
+MemoryWrapperPtr Allocation::create_architecture(const PartitionPtr partition, const std::string name)
 {
    MemoryWrapperPtr arch(new MemoryWrapper);
+   arch->id = name;
+   arch->module = ModuleDef::create(name);
+   arch->module->add_port(ModulePort::create("CLK", ModulePort::IN, ModulePort::CLK));
 
    ///create memory interfaces for the processes
    create_memory_interfaces(partition, arch);
@@ -1328,6 +1498,131 @@ MemoryWrapperPtr Allocation::create_architecture(const PartitionPtr partition)
       if (buffers->db.size() > 1 or buffers->db[buff->accelerator].size() > 1)
          prefix = buff->accelerator + "_" + buff->name + "_";
       createArrayArchitecture(partition, arch, buff, prefix);
+   }
+
+   if (arch->banks.size() > 1)
+   {
+      MemoryPtr bank = arch->banks[0];
+      std::list<RtlNodePtr> declarations;
+      declarations.push_back(RtlComment::create("signals from banks"));
+      declarations.push_back(ModuleWireArray::create("Q0_out", bank->width, arch->banks.size(), false));
+      declarations.push_back(ModuleWireArray::create("Q1_out", bank->width, arch->banks.size(), false));
+
+      declarations.push_back(RtlComment::create("signals to banks"));
+      for(const auto &b : arch->banks)
+      {
+         for(const auto &i : b->interfaces)
+         {
+            for(const auto &p : i->ports)
+            {
+               declarations.push_back(ModuleWire::create(b->id + "_" + p->id, p->size, false));
+            }
+         }
+      }
+      arch->module->add_declaration(ModuleDecl::create(declarations));
+   }
+   
+   if (arch->wires.size())
+   {
+      std::list<RtlNodePtr> declarations;
+      declarations.push_back(RtlComment::create("additional wires"));
+      bool has_buffered = false;
+      for(const auto &w : arch->wires)
+      {
+         if (w->binding == NULL) continue;
+         unsigned int w_size = boost::lexical_cast<unsigned int>(w->size);
+         if (w->is_buffered)
+         {
+            declarations.push_back(ModuleReg::create(w->id, RtlNodePtr(), w_size, false));
+         }
+         else
+         {
+            declarations.push_back(ModuleWire::create(w->id, w_size, false));
+         }
+      }
+      arch->module->add_declaration(ModuleDecl::create(declarations));
+
+      std::list<RtlNodePtr> statements;
+      for(const auto &w : arch->wires)
+      {
+         if (w->binding == NULL) continue;
+         if (w->is_buffered)
+            statements.push_back(ModuleSubstitution::create(RtlIdentifier::create(w->id), w->binding, false));
+      }
+      if (statements.size())
+      {
+         std::list<RtlNodePtr> senslist;
+         senslist.push_back(ModuleSens::create(RtlIdentifier::create("CLK"), ModuleSens::POSEDGE));
+         arch->module->add_item(ModuleAlways::create(senslist, ModuleBlock::create(statements)));
+      }
+   }
+   
+   if (arch->banks.size() > 1)
+   {
+      for(unsigned int num = 0; num < arch->banks.size(); num++)
+      {
+         arch->module->add_item(RtlComment::create("signals for bank: " + arch->banks[num]->id));
+         for(const auto &int_it : arch->banks[num]->interfaces)
+         {
+            for(const auto &p : int_it->ports)
+            {
+               if (p->dir == Port::IN and (p->binding != NULL))
+               {
+                  arch->module->add_item(ModuleAssign::create(RtlIdentifier::create(arch->banks[num]->id + "_" + p->id), p->binding));
+               }
+            }
+         }
+         arch->module->add_item(RtlComment::create("output selection for bank: " + arch->banks[num]->id));
+         arch->module->add_item(ModuleAssign::create(Pointer::create(RtlIdentifier::create("Q0_out"), IntegerValue::create(num)), RtlIdentifier::create(arch->banks[num]->id + "_Q0")));
+         arch->module->add_item(ModuleAssign::create(Pointer::create(RtlIdentifier::create("Q1_out"), IntegerValue::create(num)), RtlIdentifier::create(arch->banks[num]->id + "_Q1")));
+      }
+   }
+   
+   arch->module->add_item(RtlComment::create("assigns to output ports"));
+   for(const auto &buff : arch->buffers)
+   {
+      for(const auto &proc : buff->processes)
+      {
+         for(const auto &int_it : proc->interfaces)
+         {
+            for(const auto &p : int_it->ports)
+            {
+               if (p->dir == Port::OUT and (p->binding != NULL))
+                  arch->module->add_item(ModuleAssign::create(RtlIdentifier::create(p->id), p->binding));
+            }
+         }
+      }
+   }
+   
+
+   arch->module->add_item(RtlComment::create("definitions of the banks"));
+#if 0
+   for(const auto &b : arch->banks)
+   {
+      for(const auto &p : b->ports)
+      {
+         *os << "  wire ";
+         unsigned int p_size = boost::lexical_cast<unsigned int>(p->size);
+         if (p_size > 1)
+            *os << "[" << p_size-1 << ":0] ";
+         *os << b->id + "_" + p->id + "_float;" << std::endl;
+         p->binding = b->id + "_" + p->id + "_float";
+      }
+   }
+#endif
+   for(unsigned int num = 0; num < arch->banks.size(); num++)
+   {
+      MemoryPtr b = arch->banks[num];
+      ModuleInstancePtr bank = ModuleInstance::create(b->type, b->id, b->param_map, ModuleInstance::binding_t());
+      bank->set_port_binding("CLK", RtlIdentifier::create("CLK"));
+      for(const auto &i : b->interfaces)
+      {
+         for(const auto &p : i->ports)
+         {
+            bank->set_port_binding(p->id, RtlIdentifier::create(b->id + "_" + p->id));
+         }
+      }
+      arch->module->add_item(bank);
    }
 
    return arch;

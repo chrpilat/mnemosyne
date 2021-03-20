@@ -42,6 +42,7 @@ FORWARD_DECL(Wire);
 FORWARD_DECL(Port);
 FORWARD_DECL(Memory);
 FORWARD_DECL(MemoryLibrary);
+FORWARD_DECL(RtlNode);
 
 struct Memory
 {
@@ -53,6 +54,9 @@ struct Memory
    std::vector<PortPtr> ports;
    std::map<std::string, PortPtr> id_to_port;
    std::vector<InterfacePtr> interfaces;
+   std::vector<std::string> init_values;
+
+   std::map<std::string, RtlNodePtr> param_map;
 
    ///physical information
    double area;

@@ -182,7 +182,7 @@ void Port::parse_config(const xmlpp::Node* node)
    else
       throw "Malformed port description";
    if (port_node->get_child_text())
-      binding = port_node->get_child_text()->get_content();
+      binding = RtlIdentifier::create(port_node->get_child_text()->get_content());
    if (port_node->get_attribute("size"))
       size = boost::lexical_cast<unsigned int>(port_node->get_attribute_value("size"));
    else
