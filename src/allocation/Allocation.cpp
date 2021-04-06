@@ -541,7 +541,7 @@ void Allocation::perform_clique_partitioning(const FunctorPtr opt_functor, std::
          for(const auto& node : id_to_clique[var])
          {
             ArrayPtr buff = components->node_to_buffer[std::get<0>(node)][std::get<1>(node)];
-            if (arch_id.size()) arch_id += "__";
+            if (arch_id.size()) arch_id += "_";
             arch_id += buff->accelerator + "_" + buff->name;
             if (buffers.size()) buffers += ",";
             buffers += buff->accelerator + "_" + buff->name;
@@ -839,13 +839,13 @@ RtlNodePtr Allocation::get_activation(const PartitionPtr partition, const Memory
       assert(s_msb >= s_lsb);
       //std::string sbit_cast = "[" + boost::lexical_cast<std::string>(s_msb) + ":" + boost::lexical_cast<std::string>(s_lsb) + "]";
       //activation += " & " + prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx) + sbit_cast + " == " + boost::lexical_cast<std::string>(s);
-      activation = BinaryOperation::create(Operation::EQ, 
-		      BinaryOperation::create(Operation::AND, 
-			 activation, 
+      activation = BinaryOperation::create(Operation::AND, 
+                      activation, 
+		      BinaryOperation::create(Operation::EQ,
 			 Partselect::create(RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx)),
 		            IntegerValue::create(s_msb),
-			    IntegerValue::create(s_lsb))),
-		      IntegerValue::create(s));
+					    IntegerValue::create(s_lsb)),
+					      IntegerValue::create(s)));
    }
    if (tag->ptag_size > 0)
    {
@@ -854,13 +854,13 @@ RtlNodePtr Allocation::get_activation(const PartitionPtr partition, const Memory
       assert(s_msb >= s_lsb);
       //std::string sbit_cast = "[" + boost::lexical_cast<std::string>(s_msb) + ":" + boost::lexical_cast<std::string>(s_lsb) + "]";
       //activation += " & " + prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx) + sbit_cast + " == " + boost::lexical_cast<std::string>(p);
-      activation = BinaryOperation::create(Operation::EQ, 
-		      BinaryOperation::create(Operation::AND, 
-			 activation, 
+      activation = BinaryOperation::create(Operation::AND, 
+                      activation, 
+		      BinaryOperation::create(Operation::EQ,
 			 Partselect::create(RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx)),
 		            IntegerValue::create(s_msb),
-			    IntegerValue::create(s_lsb))),
-		      IntegerValue::create(p));
+			    IntegerValue::create(s_lsb)),
+					      IntegerValue::create(p)));
    }
    if (tag->mwtag_size > 0)
    {
@@ -869,13 +869,13 @@ RtlNodePtr Allocation::get_activation(const PartitionPtr partition, const Memory
       assert(s_msb >= s_lsb);
       //std::string sbit_cast = "[" + boost::lexical_cast<std::string>(s_msb) + ":" + boost::lexical_cast<std::string>(s_lsb) + "]";
       //activation += " & " + prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx) + sbit_cast + " == " + boost::lexical_cast<std::string>(p % (buff->w_block_size / buff->split));
-      activation = BinaryOperation::create(Operation::EQ, 
-		      BinaryOperation::create(Operation::AND, 
-			 activation, 
+      activation = BinaryOperation::create(Operation::AND, 
+                      activation, 
+		      BinaryOperation::create(Operation::EQ,
 			 Partselect::create(RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx)),
 		            IntegerValue::create(s_msb),
-			    IntegerValue::create(s_lsb))),
-		      IntegerValue::create(p % (buff->w_block_size / buff->split)));
+			    IntegerValue::create(s_lsb)),
+					      IntegerValue::create(p % (buff->w_block_size / buff->split))));
    }
    DEBUG(DBG_VERBOSE, verbosity, "     activation = { " << activation << " }" << std::endl);
    return activation;
@@ -1139,7 +1139,7 @@ void Allocation::createArrayArchitecture(const PartitionPtr partition, const Mem
                   //slice = "[" + boost::lexical_cast<std::string>(buff->width - (s_idx) * arch->banks[0]->width - 1) + ":0]";
                }
             }
-            align_list.push_back(align_item);
+            align_list.push_front(align_item);
          }
          buff_intf.first->data_out->binding = Concat::create(align_list, false);
       }
@@ -1419,13 +1419,13 @@ void Allocation::createArrayArchitecture(const PartitionPtr partition, const Mem
                      assert(s_msb >= s_lsb);
                      //std::string sbit_cast = "[" + boost::lexical_cast<std::string>(s_msb) + ":" + boost::lexical_cast<std::string>(s_lsb) + "]";
                      //local_act += " && " + prefix + "A" + boost::lexical_cast<std::string>(buff_intf->idx) + sbit_cast + " == " + boost::lexical_cast<std::string>(s);
-                     local_act = BinaryOperation::create(Operation::EQ, 
-               		      BinaryOperation::create(Operation::LAND, 
+                     local_act = BinaryOperation::create(Operation::LAND, 
                			 local_act, 
-               			 Partselect::create(RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(buff_intf->idx)),
-               		            IntegerValue::create(s_msb),
-               			    IntegerValue::create(s_lsb))),
-               		      RtlIdentifier::create(boost::lexical_cast<std::string>(s)));
+               			 BinaryOperation::create(Operation::EQ, 
+							 Partselect::create(RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(buff_intf->idx)),
+									    IntegerValue::create(s_msb),
+									    IntegerValue::create(s_lsb)),
+							 RtlIdentifier::create(boost::lexical_cast<std::string>(s))));
                   }
                   arch->split_selector[buff][buff_intf][i]->binding = CondOperation::create(local_act, RtlIdentifier::create(boost::lexical_cast<std::string>(bank_id)), arch->split_selector[buff][buff_intf][i]->binding);
 
@@ -1588,7 +1588,9 @@ MemoryWrapperPtr Allocation::create_architecture(const PartitionPtr partition, c
             for(const auto &p : int_it->ports)
             {
                if (p->dir == Port::OUT and (p->binding != NULL))
+	       {
                   arch->module->add_item(ModuleAssign::create(RtlIdentifier::create(p->id), p->binding));
+	       }
             }
          }
       }
