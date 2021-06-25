@@ -17,6 +17,13 @@ If you use the code, we would appreciate a citation to:
 
 For any questions/concerns, please email [Christian Pilato](christian.pilato@polimi.it).
 
+> This research was supported in part by the C-FAR, one of
+the six centers of STARnet, in part by the DARPA PERFECT program under
+Contract HR0011-13-C-0003, and in part by the National Science Foundation
+under Grant 1219001 and Grant 1527821.
+> This research is currently supported by the Horizon 2020 EU
+Research & Innovation programme under GA No 957269 (EVEREST project).
+
 ## Requirements: ##
 
 ### Mnemosyne dependencies ####
