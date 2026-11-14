@@ -182,6 +182,17 @@ unsigned int Array::get_minimum_bsize(unsigned int size)
 }
 
 
+unsigned int Array::get_min_bits(unsigned int size)
+{
+   unsigned int i = 0;
+   while(pow(2, i) < size)
+   {
+      i++;
+   }
+   return i;
+}
+
+
 void Array::parse_init_file(const std::string& _init_file)
 {
    init_file = _init_file;

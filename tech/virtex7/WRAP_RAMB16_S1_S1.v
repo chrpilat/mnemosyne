@@ -89,18 +89,18 @@ module BRAM_16384x1 #(
           .INIT_30(INIT_30), .INIT_31(INIT_31), .INIT_32(INIT_32), .INIT_33(INIT_33), .INIT_34(INIT_34), .INIT_35(INIT_35), .INIT_36(INIT_36), .INIT_37(INIT_37),
           .INIT_38(INIT_38), .INIT_39(INIT_39), .INIT_3A(INIT_3A), .INIT_3B(INIT_3B), .INIT_3C(INIT_3C), .INIT_3D(INIT_3D), .INIT_3E(INIT_3E), .INIT_3F(INIT_3F)
 	) bram (
-		.DOA(Q0,
+		.DOA(Q0),
 		.DOB(Q1),
-		.ADDRA(A0,
+		.ADDRA(A0),
 		.ADDRB(A1),
 		.CLKA(CLK),
 		.CLKB(CLK),
-		.DIA(D0,
+		.DIA(D0),
 		.DIB(D1),
-		.ENA(CE0,
+		.ENA(CE0),
 		.ENB(CE1),
-		.SSRA(1'b0,
-		.SSRB(1'b0,
-		.WEA(WE0,
+		.SSRA(1'b0),
+		.SSRB(1'b0),
+		.WEA(WE0),
 		.WEB(WE1));
 endmodule

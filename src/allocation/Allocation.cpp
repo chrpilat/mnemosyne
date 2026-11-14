@@ -759,10 +759,7 @@ void Allocation::set_address_binding(const PartitionPtr partition, const ArrayPt
    ///address signal
    unsigned int a_lsb = tag->ptag_size + tag->mtag_size;
    unsigned int a_msb = tag->ptag_size + tag->mtag_size;
-   if (!partition->buffer_offset[buff])
-      a_msb += tag->bank_size-1;
-   else
-      a_msb = tag->buff_size-1;
+   a_msb += tag->bank_size-1;
    assert(a_msb >= a_lsb);
    RtlNodePtr padding;
    if (a_msb >= tag->buff_size and partition->buffer_offset[buff] == 0)
@@ -790,14 +787,17 @@ void Allocation::set_address_binding(const PartitionPtr partition, const ArrayPt
       //if (padding_str.size()) str_buffer = "{" + padding_str + ",";
       //str_buffer += prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx) + abit_cast;
       //if (padding_str.size()) str_buffer += "}";
-      str_buffer = RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx));
+      if (partition->buffer_offset[buff])
+         str_buffer = RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx)+"_offset");
+      else
+         str_buffer = RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx));
       if (buff_size > 1){
          str_buffer = Partselect::create(str_buffer, IntegerValue::create(a_msb), IntegerValue::create(a_lsb));
       }
 
-      if (partition->buffer_offset[buff]) {
+      /*if (partition->buffer_offset[buff]) {
          str_buffer = BinaryOperation::create(Operation::PLUS, str_buffer, IntegerValue::create(partition->buffer_offset[buff]));
-      }
+      }*/
       if (padding != NULL) {
          std::list<RtlNodePtr> items;
          items.push_back(padding);
@@ -830,6 +830,12 @@ RtlNodePtr Allocation::get_activation(const PartitionPtr partition, const Memory
 
    TagPtr tag = partition->buffer_tag[buff];
 
+   RtlNodePtr str_buffer;
+   if (partition->buffer_offset[buff])
+      str_buffer = RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx)+"_offset");
+   else
+      str_buffer = RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx));
+
    ///activation function
    RtlNodePtr activation = RtlIdentifier::create(prefix + "CE" + boost::lexical_cast<std::string>(proc_intf->idx));
    if (tag->stag_size > 0)
@@ -842,7 +848,7 @@ RtlNodePtr Allocation::get_activation(const PartitionPtr partition, const Memory
       activation = BinaryOperation::create(Operation::AND, 
                       activation, 
 		      BinaryOperation::create(Operation::EQ,
-			 Partselect::create(RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx)),
+             Partselect::create(str_buffer,
 		            IntegerValue::create(s_msb),
 					    IntegerValue::create(s_lsb)),
 					      IntegerValue::create(s)));
@@ -857,7 +863,7 @@ RtlNodePtr Allocation::get_activation(const PartitionPtr partition, const Memory
       activation = BinaryOperation::create(Operation::AND, 
                       activation, 
 		      BinaryOperation::create(Operation::EQ,
-			 Partselect::create(RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx)),
+             Partselect::create(str_buffer,
 		            IntegerValue::create(s_msb),
 			    IntegerValue::create(s_lsb)),
 					      IntegerValue::create(p)));
@@ -872,7 +878,7 @@ RtlNodePtr Allocation::get_activation(const PartitionPtr partition, const Memory
       activation = BinaryOperation::create(Operation::AND, 
                       activation, 
 		      BinaryOperation::create(Operation::EQ,
-			 Partselect::create(RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(proc_intf->idx)),
+             Partselect::create(str_buffer,
 		            IntegerValue::create(s_msb),
 			    IntegerValue::create(s_lsb)),
 					      IntegerValue::create(p % (buff->w_block_size / buff->split))));
@@ -1419,10 +1425,15 @@ void Allocation::createArrayArchitecture(const PartitionPtr partition, const Mem
                      assert(s_msb >= s_lsb);
                      //std::string sbit_cast = "[" + boost::lexical_cast<std::string>(s_msb) + ":" + boost::lexical_cast<std::string>(s_lsb) + "]";
                      //local_act += " && " + prefix + "A" + boost::lexical_cast<std::string>(buff_intf->idx) + sbit_cast + " == " + boost::lexical_cast<std::string>(s);
-                     local_act = BinaryOperation::create(Operation::LAND, 
+                     RtlNodePtr str_buffer;
+                     if (partition->buffer_offset[buff])
+                        str_buffer = RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(buff_intf->idx)+"_offset");
+                     else
+                        str_buffer = RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(buff_intf->idx));
+                     local_act = BinaryOperation::create(Operation::LAND,
                			 local_act, 
                			 BinaryOperation::create(Operation::EQ, 
-							 Partselect::create(RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(buff_intf->idx)),
+                             Partselect::create(str_buffer,
 									    IntegerValue::create(s_msb),
 									    IntegerValue::create(s_lsb)),
 							 RtlIdentifier::create(boost::lexical_cast<std::string>(s))));
@@ -1500,33 +1511,60 @@ MemoryWrapperPtr Allocation::create_architecture(const PartitionPtr partition, c
       createArrayArchitecture(partition, arch, buff, prefix);
    }
 
+   MemoryPtr bank = arch->banks[0];
+   std::list<RtlNodePtr> declarations;
    if (arch->banks.size() > 1)
    {
-      MemoryPtr bank = arch->banks[0];
-      std::list<RtlNodePtr> declarations;
       declarations.push_back(RtlComment::create("signals from banks"));
       declarations.push_back(ModuleWireArray::create("Q0_out", bank->width, arch->banks.size(), false));
       declarations.push_back(ModuleWireArray::create("Q1_out", bank->width, arch->banks.size(), false));
-
-      declarations.push_back(RtlComment::create("signals to banks"));
-      for(const auto &b : arch->banks)
+   }
+   declarations.push_back(RtlComment::create("signals to banks"));
+   for(const auto &b : arch->banks)
+   {
+      for(const auto &i : b->interfaces)
       {
-         for(const auto &i : b->interfaces)
+         for(const auto &p : i->ports)
          {
-            for(const auto &p : i->ports)
-            {
-               declarations.push_back(ModuleWire::create(b->id + "_" + p->id, p->size, false));
-            }
+            declarations.push_back(ModuleWire::create(b->id + "_" + p->id, p->size, false));
+         }
+      }
+   }
+   arch->module->add_declaration(ModuleDecl::create(declarations));
+   
+   for (const auto &bit : partition->buffer_offset)
+   {
+      if (!bit.second) continue;
+      std::list<RtlNodePtr> declarations;
+      const ArrayPtr buff = bit.first;
+      std::string prefix;
+      if (buffers->db.size() > 1 or buffers->db[buff->accelerator].size() > 1)
+         prefix = buff->accelerator + "_" + buff->name + "_";
+      unsigned int size = Array::get_min_bits(buff->height+bit.second);
+      for(const auto &proc : buff->processes)
+      {
+         for(const auto &int_it : proc->interfaces)
+         {
+            declarations.push_back(ModuleWire::create(prefix + "A" + boost::lexical_cast<std::string>(int_it->idx)+"_offset", size, false));
          }
       }
       arch->module->add_declaration(ModuleDecl::create(declarations));
+
+      for(const auto &proc : buff->processes)
+      {
+         for(const auto &int_it : proc->interfaces)
+         {
+            RtlNodePtr str_buffer_offset = RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(int_it->idx)+"_offset");
+            RtlNodePtr str_buffer = RtlIdentifier::create(prefix + "A" + boost::lexical_cast<std::string>(int_it->idx));
+            arch->module->add_item(ModuleAssign::create(str_buffer_offset,
+                                                        BinaryOperation::create(Operation::PLUS, str_buffer, IntegerValue::create(bit.second))));         }
+      }
    }
-   
+
    if (arch->wires.size())
    {
       std::list<RtlNodePtr> declarations;
       declarations.push_back(RtlComment::create("additional wires"));
-      bool has_buffered = false;
       for(const auto &w : arch->wires)
       {
          if (w->binding == NULL) continue;
@@ -1557,21 +1595,21 @@ MemoryWrapperPtr Allocation::create_architecture(const PartitionPtr partition, c
       }
    }
    
-   if (arch->banks.size() > 1)
+   for(unsigned int num = 0; num < arch->banks.size(); num++)
    {
-      for(unsigned int num = 0; num < arch->banks.size(); num++)
+      arch->module->add_item(RtlComment::create("signals for bank: " + arch->banks[num]->id));
+      for(const auto &int_it : arch->banks[num]->interfaces)
       {
-         arch->module->add_item(RtlComment::create("signals for bank: " + arch->banks[num]->id));
-         for(const auto &int_it : arch->banks[num]->interfaces)
+         for(const auto &p : int_it->ports)
          {
-            for(const auto &p : int_it->ports)
+            if (p->dir == Port::IN and (p->binding != NULL))
             {
-               if (p->dir == Port::IN and (p->binding != NULL))
-               {
-                  arch->module->add_item(ModuleAssign::create(RtlIdentifier::create(arch->banks[num]->id + "_" + p->id), p->binding));
-               }
+               arch->module->add_item(ModuleAssign::create(RtlIdentifier::create(arch->banks[num]->id + "_" + p->id), p->binding));
             }
          }
+      }
+      if (arch->banks.size() > 1)
+      {
          arch->module->add_item(RtlComment::create("output selection for bank: " + arch->banks[num]->id));
          arch->module->add_item(ModuleAssign::create(Pointer::create(RtlIdentifier::create("Q0_out"), IntegerValue::create(num)), RtlIdentifier::create(arch->banks[num]->id + "_Q0")));
          arch->module->add_item(ModuleAssign::create(Pointer::create(RtlIdentifier::create("Q1_out"), IntegerValue::create(num)), RtlIdentifier::create(arch->banks[num]->id + "_Q1")));

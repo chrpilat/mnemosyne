@@ -111,6 +111,8 @@ struct Array
 
    static unsigned int get_minimum_bsize(unsigned int size);
 
+   static unsigned int get_min_bits(unsigned int size);
+
    void parse_init_file(const std::string& init_file);
 };
 typedef boost::shared_ptr<Array> ArrayPtr;
